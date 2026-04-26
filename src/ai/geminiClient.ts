@@ -33,7 +33,7 @@ CRITICAL RULES:
       const { GoogleGenerativeAI } = await import('@google/generative-ai');
       const genAI = new GoogleGenerativeAI(apiKey);
       this.geminiModel = genAI.getGenerativeModel({
-        model: 'gemini-1.5-flash',
+        model: 'gemini-2.0-flash',
         systemInstruction: this.SYSTEM_PROMPT,
       });
       return this.geminiModel;
@@ -92,25 +92,130 @@ CRITICAL RULES:
    * Parse intent from a transcript using AI.
    */
   async parseIntent(transcript: string, context: string): Promise<string | null> {
-    const prompt = `${context}
+    const prompt = `You are an intent classifier for a voice-controlled IDE. 
+Given the code context below, classify the user's spoken transcript into ONE intent type.
+Respond with ONLY a JSON object.
 
-The blind developer just said: "${transcript}"
+CONTEXT:
+${context.substring(0, 2000)}
 
-Classify this into ONE intent type. Respond with ONLY a JSON object:
+USER SPOKE: "${transcript}"
+
+JSON FORMAT:
 {
-  "type": "NAVIGATE" | "DIAGNOSE" | "EDIT" | "QUERY" | "UNDO",
-  "target": "optional target name or description",
-  "description": "brief description of what they want"
+  "type": "NAVIGATE" | "DIAGNOSE" | "EDIT" | "QUERY" | "UNDO" | "UNKNOWN",
+  "target": "optional target",
+  "description": "brief description"
 }
 
-If it's a navigation request (go to, take me to, find, jump to), use NAVIGATE.
-If it's about bugs/errors/issues (find bugs, what's wrong, anything broken), use DIAGNOSE.
-If it's about fixing/changing/adding code (fix it, add, change, make), use EDIT.
-If it's a question (what does, explain, how, why, tell me about), use QUERY.
-If it's about undoing/reverting (undo, go back, restore, revert), use UNDO.`;
+RULES:
+- NAVIGATE: jump to, go to, find
+- DIAGNOSE: find bugs, what's wrong, scan
+- EDIT: fix it, change this, add
+- QUERY: what is this, explain, where am i
+- UNDO: go back, revert`;
 
-    const result = await this.codeQuery(prompt, '');
-    return result;
+    try {
+      const model = await this.getGeminiModel();
+      if (model) {
+        const result = await model.generateContent(prompt);
+        return result.response.text();
+      }
+    } catch (err) {
+      console.warn('[BlindCode] Gemini intent parsing failed, trying Groq fallback:', (err as any)?.status || err);
+    }
+
+    // Fallback to Groq
+    try {
+      const result = await this.queryGroq(prompt);
+      if (result) return result;
+    } catch (err) {
+      console.error('[BlindCode] Groq intent parsing also failed:', err);
+    }
+
+    return null;
+  }
+
+  /**
+   * Request a code modification. The AI must return structured JSON.
+   */
+  async proposeCodeChange(instruction: string, context: string, code: string): Promise<{ speech: string; newCode: string } | null> {
+    // Truncate code to prevent prompt overflow (keep first 6000 chars)
+    const truncatedCode = code.length > 6000 ? code.substring(0, 6000) + '\n// ... (truncated)' : code;
+
+    const prompt = `You are BlindCode — an AI co-pilot for a blind software developer.
+The developer wants to modify their code.
+
+CRITICAL RULES:
+- The developer CANNOT see the screen at all
+- Use spatial language
+- Keep speech under 4 sentences
+- You MUST respond with ONLY a valid JSON object, no markdown fences, no extra text
+
+CONTEXT:
+${context.substring(0, 500)}
+
+CURRENT FILE CONTENT:
+\`\`\`
+${truncatedCode}
+\`\`\`
+
+USER REQUEST: "${instruction}"
+
+Respond with ONLY this JSON object (no markdown, no backticks around it):
+{
+  "speech": "Brief description of what you fixed",
+  "newCode": "the complete corrected file content"
+}`;
+
+    const parseResponse = (text: string) => {
+      try {
+        // Try to find JSON in the response
+        // Remove markdown code fences if present
+        let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
+        const match = cleaned.match(/\{[\s\S]*\}/);
+        if (match) {
+          const parsed = JSON.parse(match[0]);
+          if (parsed.newCode && parsed.newCode.length > 10) {
+            return {
+              speech: parsed.speech || "I have prepared the change.",
+              newCode: parsed.newCode
+            };
+          }
+        }
+      } catch (parseErr) {
+        console.error('[BlindCode] JSON parse failed:', parseErr, 'Raw text:', text.substring(0, 200));
+      }
+      return null;
+    };
+
+    // Try Gemini first
+    try {
+      const model = await this.getGeminiModel();
+      if (model) {
+        const result = await model.generateContent(prompt);
+        const text = result.response.text();
+        console.log('[BlindCode] Gemini proposeCodeChange response length:', text.length);
+        const parsed = parseResponse(text);
+        if (parsed) return parsed;
+      }
+    } catch (err) {
+      console.warn('[BlindCode] Gemini code change failed, trying Groq:', (err as any)?.status || err);
+    }
+
+    // Fallback to Groq (use large query for code)
+    try {
+      const text = await this.queryGroqLarge(prompt);
+      if (text) {
+        console.log('[BlindCode] Groq proposeCodeChange response length:', text.length);
+        const parsed = parseResponse(text);
+        if (parsed) return parsed;
+      }
+    } catch (err) {
+      console.error('[BlindCode] Groq code change also failed:', err);
+    }
+
+    return null;
   }
 
   private async queryGemini(prompt: string): Promise<string | null> {
@@ -137,14 +242,39 @@ If it's about undoing/reverting (undo, go back, restore, revert), use UNDO.`;
           { role: 'system', content: this.SYSTEM_PROMPT },
           { role: 'user', content: prompt },
         ],
-        model: 'llama-3.1-8b-instant',
+        model: 'llama-3.3-70b-versatile',
         temperature: 0.3,
-        max_tokens: 500,
+        max_tokens: 2048,
       });
 
       return completion.choices[0]?.message?.content || null;
     } catch (err) {
       console.error('[BlindCode] Groq query failed:', err);
+      return null;
+    }
+  }
+
+  /**
+   * Large-output Groq query for code change operations (needs more tokens).
+   */
+  private async queryGroqLarge(prompt: string): Promise<string | null> {
+    try {
+      const client = await this.getGroqClient();
+      if (!client) return null;
+
+      const completion = await client.chat.completions.create({
+        messages: [
+          { role: 'system', content: 'You are BlindCode, an AI co-pilot for a blind developer. You MUST respond with valid JSON only. No markdown, no explanation outside the JSON.' },
+          { role: 'user', content: prompt },
+        ],
+        model: 'llama-3.3-70b-versatile',
+        temperature: 0.2,
+        max_tokens: 8192,
+      });
+
+      return completion.choices[0]?.message?.content || null;
+    } catch (err) {
+      console.error('[BlindCode] Groq large query failed:', err);
       return null;
     }
   }

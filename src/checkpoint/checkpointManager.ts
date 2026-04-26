@@ -1,93 +1,102 @@
 import * as vscode from 'vscode';
-import { execSync, exec } from 'child_process';
 
 /**
- * Checkpoint Manager — named Git checkpoints for conversational undo.
- * "Create checkpoint called 'before refactor'"
- * "Undo everything since 'before refactor'"
+ * Checkpoint Manager — In-memory file snapshots for safe undo.
+ * No Git dependency. Stores file content before each AI edit
+ * so the developer can instantly revert with "undo".
  */
+
+interface Checkpoint {
+  name: string;
+  fileUri: vscode.Uri;
+  content: string;
+  timestamp: number;
+}
+
 export class CheckpointManager {
+  private checkpoints: Checkpoint[] = [];
+  private readonly MAX_CHECKPOINTS = 20;
+
   /**
-   * Create a named checkpoint (Git commit).
+   * Create a named checkpoint by saving the current file's content in memory.
    */
   async create(name: string): Promise<string> {
-    const cwd = this.getWorkspaceRoot();
-    if (!cwd) return 'No workspace folder open.';
+    const editor = vscode.window.activeTextEditor;
+    if (!editor) return 'No file open to checkpoint.';
 
-    try {
-      // Stage all changes
-      execSync('git add -A', { cwd, stdio: 'pipe' });
-      // Commit with checkpoint name
-      const commitMsg = `[BlindCode Checkpoint] ${name}`;
-      execSync(`git commit -m "${commitMsg}" --allow-empty`, { cwd, stdio: 'pipe' });
-      return `Checkpoint "${name}" saved.`;
-    } catch (err: any) {
-      // Check if git is initialized
-      try {
-        execSync('git status', { cwd, stdio: 'pipe' });
-      } catch {
-        // Initialize git
-        execSync('git init', { cwd, stdio: 'pipe' });
-        execSync('git add -A', { cwd, stdio: 'pipe' });
-        execSync(`git commit -m "[BlindCode Checkpoint] ${name}"`, { cwd, stdio: 'pipe' });
-        return `Git initialized and checkpoint "${name}" saved.`;
-      }
-      return `Could not create checkpoint: ${err.message}`;
+    const content = editor.document.getText();
+    const fileUri = editor.document.uri;
+
+    this.checkpoints.push({
+      name,
+      fileUri,
+      content,
+      timestamp: Date.now()
+    });
+
+    // Keep only the last N checkpoints
+    if (this.checkpoints.length > this.MAX_CHECKPOINTS) {
+      this.checkpoints.shift();
     }
+
+    console.log(`[BlindCode] Checkpoint "${name}" saved (${content.length} chars)`);
+    return `Checkpoint "${name}" saved.`;
   }
 
   /**
    * List available checkpoints.
    */
   async list(): Promise<string[]> {
-    const cwd = this.getWorkspaceRoot();
-    if (!cwd) return [];
-
-    try {
-      const output = execSync(
-        'git log --oneline --grep="\\[BlindCode Checkpoint\\]" -20',
-        { cwd, stdio: 'pipe', encoding: 'utf-8' }
-      );
-
-      return output
-        .trim()
-        .split('\n')
-        .filter(line => line.length > 0)
-        .map(line => {
-          const match = line.match(/\[BlindCode Checkpoint\]\s*(.+)/);
-          return match ? match[1] : line;
-        });
-    } catch {
-      return [];
-    }
+    return this.checkpoints.map(cp => cp.name);
   }
 
   /**
-   * Restore to a named checkpoint.
+   * Restore the most recent checkpoint (or a named one).
    */
-  async restore(name: string): Promise<string> {
-    const cwd = this.getWorkspaceRoot();
-    if (!cwd) return 'No workspace folder open.';
+  async restore(name?: string): Promise<string> {
+    let checkpoint: Checkpoint | undefined;
+
+    if (name) {
+      // Find by name (search from newest to oldest)
+      for (let i = this.checkpoints.length - 1; i >= 0; i--) {
+        if (this.checkpoints[i].name.includes(name)) {
+          checkpoint = this.checkpoints[i];
+          break;
+        }
+      }
+    } else {
+      // Just get the most recent one
+      checkpoint = this.checkpoints[this.checkpoints.length - 1];
+    }
+
+    if (!checkpoint) {
+      return name ? `Checkpoint "${name}" not found.` : 'No checkpoints available.';
+    }
 
     try {
-      // Find the commit hash for this checkpoint
-      const output = execSync(
-        `git log --oneline --grep="\\[BlindCode Checkpoint\\] ${name}" -1`,
-        { cwd, stdio: 'pipe', encoding: 'utf-8' }
+      // Open the document and replace its content
+      const doc = await vscode.workspace.openTextDocument(checkpoint.fileUri);
+      const editor = await vscode.window.showTextDocument(doc);
+
+      const fullRange = new vscode.Range(
+        doc.positionAt(0),
+        doc.positionAt(doc.getText().length)
       );
 
-      const hash = output.trim().split(' ')[0];
-      if (!hash) return `Checkpoint "${name}" not found.`;
+      const edit = new vscode.WorkspaceEdit();
+      edit.replace(checkpoint.fileUri, fullRange, checkpoint.content);
+      await vscode.workspace.applyEdit(edit);
+      await doc.save();
 
-      // Reset to that commit
-      execSync(`git reset --hard ${hash}`, { cwd, stdio: 'pipe' });
-      return `Restored to checkpoint "${name}". All changes after this point have been undone.`;
+      // Remove this checkpoint and all newer ones
+      const idx = this.checkpoints.indexOf(checkpoint);
+      if (idx >= 0) {
+        this.checkpoints = this.checkpoints.slice(0, idx);
+      }
+
+      return `Restored to checkpoint "${checkpoint.name}". File reverted successfully.`;
     } catch (err: any) {
-      return `Could not restore checkpoint: ${err.message}`;
+      return `Could not restore: ${err.message}`;
     }
-  }
-
-  private getWorkspaceRoot(): string | null {
-    return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath ?? null;
   }
 }

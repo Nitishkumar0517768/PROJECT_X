@@ -8,9 +8,20 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other", "Education"],
-  "keywords": ["accessibility", "blind", "visually impaired", "spatial audio", "voice coding"],
-  "activationEvents": ["onStartupFinished"],
+  "categories": [
+    "Other",
+    "Education"
+  ],
+  "keywords": [
+    "accessibility",
+    "blind",
+    "visually impaired",
+    "spatial audio",
+    "voice coding"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
   "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {
@@ -32,34 +43,73 @@
       ]
     },
     "commands": [
-      { "command": "blindcode.pushToTalk", "title": "BlindCode: Push to Talk", "icon": "$(mic)" },
-      { "command": "blindcode.whereAmI", "title": "BlindCode: Where Am I?" },
-      { "command": "blindcode.findBugs", "title": "BlindCode: Find Bugs" },
-      { "command": "blindcode.fixIt", "title": "BlindCode: Fix Current Issue" },
-      { "command": "blindcode.confirm", "title": "BlindCode: Confirm Change" },
-      { "command": "blindcode.reject", "title": "BlindCode: Reject Change" },
-      { "command": "blindcode.repeatLast", "title": "BlindCode: Repeat Last Response" },
-      { "command": "blindcode.stopSpeaking", "title": "BlindCode: Stop Speaking" },
-      { "command": "blindcode.slower", "title": "BlindCode: Slower Speech" },
-      { "command": "blindcode.faster", "title": "BlindCode: Faster Speech" },
-      { "command": "blindcode.spellItOut", "title": "BlindCode: Spell It Out" },
-      { "command": "blindcode.dropLandmark", "title": "BlindCode: Drop Landmark Here" },
-      { "command": "blindcode.goToLandmark", "title": "BlindCode: Go To Landmark" },
-      { "command": "blindcode.toggleAudio", "title": "BlindCode: Toggle Spatial Audio" },
-      { "command": "blindcode.createCheckpoint", "title": "BlindCode: Create Checkpoint" },
-      { "command": "blindcode.restoreCheckpoint", "title": "BlindCode: Restore Checkpoint" }
+      {
+        "command": "blindcode.pushToTalk",
+        "title": "BlindCode: Push to Talk",
+        "icon": "$(mic)"
+      },
+      {
+        "command": "blindcode.whereAmI",
+        "title": "BlindCode: Where Am I?"
+      },
+      {
+        "command": "blindcode.findBugs",
+        "title": "BlindCode: Find Bugs"
+      },
+      {
+        "command": "blindcode.fixIt",
+        "title": "BlindCode: Fix Current Issue"
+      },
+      {
+        "command": "blindcode.confirm",
+        "title": "BlindCode: Confirm Change"
+      },
+      {
+        "command": "blindcode.reject",
+        "title": "BlindCode: Reject Change"
+      },
+      {
+        "command": "blindcode.repeatLast",
+        "title": "BlindCode: Repeat Last Response"
+      },
+      {
+        "command": "blindcode.stopSpeaking",
+        "title": "BlindCode: Stop Speaking"
+      },
+      {
+        "command": "blindcode.slower",
+        "title": "BlindCode: Slower Speech"
+      },
+      {
+        "command": "blindcode.faster",
+        "title": "BlindCode: Faster Speech"
+      },
+      {
+        "command": "blindcode.spellItOut",
+        "title": "BlindCode: Spell It Out"
+      },
+      {
+        "command": "blindcode.dropLandmark",
+        "title": "BlindCode: Drop Landmark Here"
+      },
+      {
+        "command": "blindcode.goToLandmark",
+        "title": "BlindCode: Go To Landmark"
+      },
+      {
+        "command": "blindcode.toggleAudio",
+        "title": "BlindCode: Toggle Spatial Audio"
+      },
+      {
+        "command": "blindcode.createCheckpoint",
+        "title": "BlindCode: Create Checkpoint"
+      },
+      {
+        "command": "blindcode.restoreCheckpoint",
+        "title": "BlindCode: Restore Checkpoint"
+      }
     ],
-    "keybindings": [
-      { "command": "blindcode.pushToTalk", "key": "alt+b", "when": "editorTextFocus || blindcode.panelFocus" },
-      { "command": "blindcode.whereAmI", "key": "alt+w", "when": "editorTextFocus" },
-      { "command": "blindcode.findBugs", "key": "alt+d", "when": "editorTextFocus" },
-      { "command": "blindcode.confirm", "key": "alt+y" },
-      { "command": "blindcode.reject", "key": "alt+n" },
-      { "command": "blindcode.repeatLast", "key": "alt+r" },
-      { "command": "blindcode.stopSpeaking", "key": "alt+s" },
-      { "command": "blindcode.dropLandmark", "key": "alt+l", "when": "editorTextFocus" },
-      { "command": "blindcode.toggleAudio", "key": "alt+a" }
-    ],
+    "keybindings": [],
     "configuration": {
       "title": "BlindCode",
       "properties": {
@@ -77,14 +127,14 @@
           "type": "number",
           "default": 0.85,
           "minimum": 0.3,
-          "maximum": 3.0,
+          "maximum": 3,
           "description": "Speech output rate (0.3 = very slow, 3.0 = very fast)"
         },
         "blindcode.audioVolume": {
           "type": "number",
           "default": 0.6,
-          "minimum": 0.0,
-          "maximum": 1.0,
+          "minimum": 0,
+          "maximum": 1,
           "description": "Spatial audio volume"
         },
         "blindcode.spatialAudioEnabled": {
@@ -94,7 +144,10 @@
         },
         "blindcode.primaryAiProvider": {
           "type": "string",
-          "enum": ["gemini", "groq"],
+          "enum": [
+            "gemini",
+            "groq"
+          ],
           "default": "gemini",
           "description": "Primary AI provider"
         }
@@ -109,12 +162,16 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.21.0",
-    "groq-sdk": "^0.8.0"
+    "assemblyai": "^4.30.0",
+    "groq-sdk": "^0.8.0",
+    "node-record-lpcm16": "^1.0.1",
+    "ws": "^8.20.0"
   },
   "devDependencies": {
-    "@types/vscode": "^1.85.0",
     "@types/node": "^20.0.0",
-    "typescript": "^5.4.0",
-    "esbuild": "^0.20.0"
+    "@types/vscode": "^1.85.0",
+    "@types/ws": "^8.18.1",
+    "esbuild": "^0.20.0",
+    "typescript": "^5.4.0"
   }
 }

@@ -7,7 +7,6 @@ import { VoiceInput } from './voice/voiceInput';
 import { VoiceOutput } from './voice/voiceOutput';
 import { SpeechCommandRegistry } from './voice/speechCommands';
 import { GeminiClient } from './ai/geminiClient';
-import { IntentParser } from './ai/intentParser';
 import { ContextBuilder } from './ai/contextBuilder';
 import { TrustProtocol } from './ai/trustProtocol';
 import { SessionMemory } from './ai/sessionMemory';
@@ -16,8 +15,7 @@ import { LandmarkManager } from './navigation/landmarkManager';
 import { SymbolNavigator } from './navigation/symbolNavigator';
 import { ErrorNarrator } from './debug/errorNarrator';
 import { CheckpointManager } from './checkpoint/checkpointManager';
-import { WhisperClient } from './voice/whisperClient';
-import { SystemSpeechListener } from './voice/systemSpeechListener';
+import { SpeechService } from './voice/speechService';
 
 /** The main webview view provider for BlindCode sidebar panel */
 class BlindCodeViewProvider implements vscode.WebviewViewProvider {
@@ -31,7 +29,6 @@ class BlindCodeViewProvider implements vscode.WebviewViewProvider {
   private voiceOutput: VoiceOutput;
   private commandRegistry: SpeechCommandRegistry;
   private aiClient: GeminiClient;
-  private intentParser: IntentParser;
   private contextBuilder: ContextBuilder;
   private trustProtocol: TrustProtocol;
   private sessionMemory: SessionMemory;
@@ -40,8 +37,12 @@ class BlindCodeViewProvider implements vscode.WebviewViewProvider {
   private symbolNavigator: SymbolNavigator;
   private errorNarrator: ErrorNarrator;
   private checkpointManager: CheckpointManager;
-  private whisperClient: WhisperClient;
-  private speechListener: SystemSpeechListener;
+  private speechService: SpeechService;
+  
+  private isListenerReady: boolean = false;
+  private isProcessingVoice: boolean = false;
+  private isAsleep: boolean = false;
+  private isSpeaking: boolean = false;
 
   constructor(private readonly _extensionUri: vscode.Uri) {
     // Initialize subsystems
@@ -53,15 +54,17 @@ class BlindCodeViewProvider implements vscode.WebviewViewProvider {
     this.voiceInput = new VoiceInput();
     this.voiceOutput = new VoiceOutput();
     this.commandRegistry = new SpeechCommandRegistry();
-    this.intentParser = new IntentParser(this.aiClient);
     this.checkpointManager = new CheckpointManager();
     this.trustProtocol = new TrustProtocol(this.checkpointManager);
+    this.speechService = new SpeechService();
+
+    // Track sleep state only (removed isSpeaking gate — it blocked transcripts)
+    this.voiceOutput.on('start', () => { /* TTS started */ });
+    this.voiceOutput.on('end', () => { /* TTS ended */ });
     this.codeGPS = new CodeGPS();
     this.landmarkManager = new LandmarkManager();
     this.symbolNavigator = new SymbolNavigator();
     this.errorNarrator = new ErrorNarrator(this.aiClient, this.contextBuilder);
-    this.whisperClient = new WhisperClient();
-    this.speechListener = new SystemSpeechListener();
   }
 
   /**
@@ -101,69 +104,78 @@ class BlindCodeViewProvider implements vscode.WebviewViewProvider {
   public get webview(): vscode.Webview | undefined {
     return this._view?.webview;
   }
-  // ─── System Speech Listener ─────────────────────────────────────────
+  // ─── System Speech Listener (AssemblyAI Real-Time) ───────────────────
 
   public startSystemListener(): void {
-    this.speechListener.on('ready', () => {
-      console.log('[BlindCode] System speech listener ready — microphone active.');
-      this.voiceOutput.speak('BlindCode is listening. Just speak naturally.', 'high');
-      this.postMessage({ type: 'showTranscript', text: '🎤 Microphone active — speak naturally' });
+    this.speechService.on('open', () => {
+      console.log('[BlindCode] AssemblyAI speech listener ready — microphone active.');
+      this.isListenerReady = true;
+      this.postMessage({ type: 'micReady' });
+      console.log('[BlindCode] Mic ready — listening for commands.');
     });
 
-    this.speechListener.on('hearing', () => {
-      this.postMessage({ type: 'showTranscript', text: '🔴 Hearing you...' });
-    });
+    this.speechService.on('transcript', (msg: { text: string, isFinal: boolean }) => {
+      if (this.isAsleep) return;
 
-    this.speechListener.on('transcript', async (text: string, confidence: number) => {
-      console.log(`[BlindCode] Heard: "${text}" (${confidence}% confidence)`);
-      this.postMessage({ type: 'showTranscript', text: `🗣️ "${text}"` });
+      // Show live transcript in sidebar
+      this.postMessage({ type: 'showTranscript', text: `🗣️ ${msg.text}` });
 
-      // Check for direct command first
-      const command = this.commandRegistry.match(text);
-      if (command) {
-        switch (command) {
-          case 'whereAmI': await this.handleWhereAmI(); break;
-          case 'findBugs': await this.handleFindBugs(); break;
-          case 'fixIt': await this.handleFixIt(); break;
-          case 'confirm': await this.handleConfirm(); break;
-          case 'reject': await this.handleReject(); break;
-          case 'repeatLast': await this.handleRepeatLast(); break;
-          case 'stopSpeaking': await this.handleStopSpeaking(); break;
-          case 'slower': await this.handleSlower(); break;
-          case 'faster': await this.handleFaster(); break;
-          case 'spellItOut': await this.handleSpellItOut(); break;
-          case 'dropLandmark': await this.handleDropLandmark(); break;
-          case 'toggleAudio': await this.handleToggleAudio(); break;
-          case 'createCheckpoint': await this.handleCreateCheckpoint(); break;
-          case 'restoreCheckpoint': await this.handleRestoreCheckpoint(); break;
+      if (msg.isFinal && msg.text.trim()) {
+        const command = this.commandRegistry.match(msg.text);
+        if (command) {
+          console.log('[BlindCode] Voice command:', command);
+          this.dispatchCommand(command, msg.text);
         }
-        return;
       }
-
-      // Fall through to AI intent processing
-      await this._handleVoiceTranscript(text);
     });
 
-    this.speechListener.on('audioData', async (base64: string) => {
-      await this._handleAudioData(base64, 'audio/wav');
+    this.speechService.on('level', (level: number) => {
+      this.postMessage({ type: 'micLevel', level });
     });
 
-    this.speechListener.on('error', (msg: string) => {
-      console.error('[BlindCode] Speech listener error:', msg);
+    this.speechService.on('error', (err: Error) => {
+      console.error('[BlindCode] Speech service error:', err);
+      this.voiceOutput.speak('Microphone error: ' + err.message, 'high');
+      this.postMessage({ type: 'showTranscript', text: '❌ Error: ' + err.message });
     });
 
-    this.speechListener.start();
+    this.speechService.start();
   }
 
   public stopSystemListener(): void {
-    this.speechListener.stop();
+    this.speechService.stop();
+  }
+
+  /** Route a matched command name to its handler */
+  private dispatchCommand(command: string, rawText: string): void {
+    const dispatch: Record<string, () => void> = {
+      'whereAmI':          () => this.handleWhereAmI(),
+      'findBugs':          () => this.handleFindBugs(),
+      'fixIt':             () => this.handleFixIt(rawText),
+      'confirm':           () => this.handleConfirm(),
+      'reject':            () => this.handleReject(),
+      'startListening':    () => { this.isAsleep = false; this.voiceOutput.speak('Listening.', 'high'); },
+      'stopListening':     () => { this.isAsleep = true; this.voiceOutput.speak('Going to sleep.', 'high'); },
+      'repeatLast':        () => this.handleRepeatLast(),
+      'stopSpeaking':      () => this.handleStopSpeaking(),
+      'slower':            () => this.handleSlower(),
+      'faster':            () => this.handleFaster(),
+      'spellItOut':        () => this.handleSpellItOut(),
+      'dropLandmark':      () => this.handleDropLandmark(),
+      'goToLandmark':      () => this.handleGoToLandmark(),
+      'toggleAudio':       () => this.handleToggleAudio(),
+      'createCheckpoint':  () => this.handleCreateCheckpoint(),
+      'restoreCheckpoint': () => this.handleRestoreCheckpoint(),
+    };
+    const handler = dispatch[command];
+    if (handler) {
+      handler();
+    } else {
+      console.warn('[BlindCode] No handler for command:', command);
+    }
   }
 
   // ─── Command Handlers ───────────────────────────────────────────────
-
-  public async handlePushToTalk(): Promise<void> {
-    this.voiceInput.toggle();
-  }
 
   public async handleWhereAmI(): Promise<void> {
     const position = this.codeGPS.getCurrentPosition();
@@ -177,14 +189,15 @@ class BlindCodeViewProvider implements vscode.WebviewViewProvider {
     this.voiceOutput.speak('Scanning for issues...', 'high');
     const narration = await this.errorNarrator.narrateErrors();
     if (narration) {
-      this.voiceOutput.speak(narration, 'normal');
+      this.voiceOutput.speak(narration + '. Preparing a fix now...', 'normal');
       this.sessionMemory.addAction('diagnose', 'Find bugs');
+      await this.handleFixIt('Fix all issues found: ' + narration);
     } else {
       this.voiceOutput.speak('No issues found in the current file. Looking clean!', 'normal');
     }
   }
 
-  public async handleFixIt(): Promise<void> {
+  public async handleFixIt(instruction?: string): Promise<void> {
     const editor = vscode.window.activeTextEditor;
     if (!editor) {
       this.voiceOutput.speak('No file is open.', 'high');
@@ -193,13 +206,16 @@ class BlindCodeViewProvider implements vscode.WebviewViewProvider {
 
     this.voiceOutput.speak('Analyzing and preparing a fix...', 'high');
     const context = await this.contextBuilder.buildContext();
-    const response = await this.aiClient.codeQuery(
-      'Fix the most critical issue in the current code.',
-      context
+    const code = editor.document.getText();
+    
+    const response = await this.aiClient.proposeCodeChange(
+      instruction || 'Fix the most critical issue in the current code.',
+      context,
+      code
     );
 
     if (response) {
-      this.trustProtocol.propose(response, editor);
+      this.trustProtocol.propose(response.speech, editor, response.newCode);
       const proposal = this.trustProtocol.getPendingDescription();
       this.voiceOutput.speak(proposal, 'normal');
       this.sessionMemory.addAction('edit', 'Fix it');
@@ -307,100 +323,6 @@ class BlindCodeViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  // ─── Voice Transcript Handler ───────────────────────────────────────
-
-  private async _handleVoiceTranscript(transcript: string): Promise<void> {
-    this.voiceOutput.speak('Processing...', 'high');
-    this.sessionMemory.addAction('voice', transcript);
-
-    // Parse intent
-    const context = await this.contextBuilder.buildContext();
-    const intent = await this.intentParser.parse(transcript, context);
-
-    switch (intent.type) {
-      case 'NAVIGATE':
-        if (intent.target) {
-          await this.symbolNavigator.navigateTo(intent.target);
-          const pos = this.codeGPS.getCurrentPosition();
-          this.voiceOutput.speak(pos || 'Navigation complete.', 'normal');
-        }
-        break;
-
-      case 'DIAGNOSE':
-        await this.handleFindBugs();
-        break;
-
-      case 'EDIT':
-        await this.handleFixIt();
-        break;
-
-      case 'QUERY':
-        const answer = await this.aiClient.codeQuery(transcript, context);
-        if (answer) {
-          this.voiceOutput.speak(answer, 'normal');
-        }
-        break;
-
-      case 'UNDO':
-        await this.handleRestoreCheckpoint();
-        break;
-
-      default:
-        // Freeform AI query
-        const response = await this.aiClient.codeQuery(transcript, context);
-        if (response) {
-          this.voiceOutput.speak(response, 'normal');
-        } else {
-          this.voiceOutput.speak('I didn\'t understand that. Could you try again?', 'normal');
-        }
-    }
-  }
-
-  // ─── Audio Data Handler (Groq Whisper STT) ──────────────────────────
-
-  private async _handleAudioData(audioBase64: string, mimeType: string): Promise<void> {
-    try {
-      const transcript = await this.whisperClient.transcribe(audioBase64, mimeType);
-      if (!transcript || transcript.length < 2) return;
-
-      // Filter out noise/silence transcriptions
-      const cleaned = transcript.toLowerCase().trim();
-      const noisePatterns = ['you', 'thank you', 'thanks', 'bye', 'okay', 'hmm', 'um', 'uh', '...'];
-      if (noisePatterns.includes(cleaned)) return;
-
-      console.log('[BlindCode] Transcribed:', transcript);
-      this.postMessage({ type: 'showTranscript', text: transcript });
-
-      // Check if it's a direct command first
-      const command = this.commandRegistry.match(transcript);
-      if (command) {
-        switch (command) {
-          case 'whereAmI': await this.handleWhereAmI(); break;
-          case 'findBugs': await this.handleFindBugs(); break;
-          case 'fixIt': await this.handleFixIt(); break;
-          case 'confirm': await this.handleConfirm(); break;
-          case 'reject': await this.handleReject(); break;
-          case 'repeatLast': await this.handleRepeatLast(); break;
-          case 'stopSpeaking': await this.handleStopSpeaking(); break;
-          case 'slower': await this.handleSlower(); break;
-          case 'faster': await this.handleFaster(); break;
-          case 'spellItOut': await this.handleSpellItOut(); break;
-          case 'dropLandmark': await this.handleDropLandmark(); break;
-          case 'toggleAudio': await this.handleToggleAudio(); break;
-          case 'createCheckpoint': await this.handleCreateCheckpoint(); break;
-          case 'restoreCheckpoint': await this.handleRestoreCheckpoint(); break;
-          default: break;
-        }
-        return;
-      }
-
-      // Fall through to AI-based intent processing
-      await this._handleVoiceTranscript(transcript);
-    } catch (err) {
-      console.error('[BlindCode] Audio transcription error:', err);
-    }
-  }
-
   // ─── Webview Message Handler ────────────────────────────────────────
 
   private async _handleWebviewMessage(message: any): Promise<void> {
@@ -412,29 +334,73 @@ class BlindCodeViewProvider implements vscode.WebviewViewProvider {
           speechRate: BlindCodeConfig.speechRate,
           volume: BlindCodeConfig.audioVolume,
         });
+        
+        // If the speech listener was already ready before the panel opened,
+        // send micReady now so the UI updates correctly
+        if (this.isListenerReady) {
+          this.postMessage({ type: 'micReady' });
+          this.postMessage({ type: 'showTranscript', text: '🎤 Microphone active — speak naturally' });
+        }
+        
         this.voiceOutput.speak('BlindCode is ready. Just start speaking. I am always listening.', 'normal');
         break;
 
-      case 'transcript':
-        await this._handleVoiceTranscript(message.text);
-        break;
-
-      case 'audioData':
-        // Audio chunk from always-on mic — transcribe via Groq Whisper
-        await this._handleAudioData(message.audio, message.mimeType);
+      case 'audioStreamChunk':
+        // Pipe continuous PCM stream to AssemblyAI
+        if (!this.isAsleep && !this.isSpeaking) {
+          this.speechService.sendAudio(message.data);
+        }
         break;
 
       case 'listeningStarted':
         console.log('[BlindCode] Always-on listening started.');
         break;
 
-      case 'speechEnd':
-        break;
-
       case 'error':
         console.error('[BlindCode] Webview error:', message.message);
         this.voiceOutput.speak(message.message, 'high');
         break;
+
+      case 'buttonCommand':
+        // Button clicks are treated exactly like voice commands
+        console.log(`[BlindCode] Button command: "${message.command}"`);
+        await this._handleButtonCommand(message.command);
+    }
+  }
+
+  // ─── Button Command Handler ─────────────────────────────────────────
+
+  private async _handleButtonCommand(commandText: string): Promise<void> {
+    const command = this.commandRegistry.match(commandText);
+
+    // Wake word
+    if (command === 'startListening') {
+      this.isAsleep = false;
+      this.voiceOutput.speak('I am awake and listening.', 'high');
+      return;
+    }
+
+    if (command) {
+      switch (command) {
+        case 'stopListening':
+          this.isAsleep = true;
+          this.voiceOutput.speak('Going to sleep. Say wake up to resume.', 'high');
+          break;
+        case 'stopSpeaking': await this.handleStopSpeaking(); break;
+        case 'confirm': await this.handleConfirm(); break;
+        case 'reject': await this.handleReject(); break;
+        case 'repeatLast': await this.handleRepeatLast(); break;
+        case 'whereAmI': await this.handleWhereAmI(); break;
+        case 'findBugs': await this.handleFindBugs(); break;
+        case 'fixIt': await this.handleFixIt(); break;
+        case 'slower': await this.handleSlower(); break;
+        case 'faster': await this.handleFaster(); break;
+        case 'spellItOut': await this.handleSpellItOut(); break;
+        case 'dropLandmark': await this.handleDropLandmark(); break;
+        case 'toggleAudio': await this.handleToggleAudio(); break;
+        case 'createCheckpoint': await this.handleCreateCheckpoint(); break;
+        case 'restoreCheckpoint': await this.handleRestoreCheckpoint(); break;
+      }
     }
   }
 
@@ -480,23 +446,38 @@ class BlindCodeViewProvider implements vscode.WebviewViewProvider {
     </div>
     <div class="bc-section">
       <div class="bc-mic-indicator" id="mic-indicator">
-        <span class="mic-icon">🎤</span>
-        <span class="mic-label" id="mic-label">Starting microphone...</span>
+        <div class="mic-status-row">
+          <span class="mic-icon">🎤</span>
+          <span class="mic-label" id="mic-label">Starting microphone...</span>
+        </div>
+        <div class="volume-bar-container">
+          <div id="volume-bar" class="volume-bar"></div>
+        </div>
       </div>
+      <canvas id="visualizer" width="300" height="60" style="display:none; width:100%; margin-top:10px; border-radius:4px; background:#1e1e1e;"></canvas>
     </div>
     <div class="bc-section">
-      <div class="bc-transcript" id="transcript"></div>
+      <div class="bc-transcript" id="transcript">Waiting for speech...</div>
     </div>
     <div class="bc-section">
       <div class="bc-response" id="response"></div>
     </div>
-    <div class="bc-shortcuts">
-      <p><kbd>Alt+B</kbd> Push to Talk</p>
-      <p><kbd>Alt+W</kbd> Where Am I?</p>
-      <p><kbd>Alt+D</kbd> Find Bugs</p>
-      <p><kbd>Alt+Y</kbd> Confirm</p>
-      <p><kbd>Alt+N</kbd> Reject</p>
-      <p><kbd>Alt+R</kbd> Repeat</p>
+    <div class="bc-commands-guide">
+      <div class="bc-guide-title">🎙️ Quick Commands</div>
+      <div class="bc-btn-grid">
+        <button class="bc-cmd-btn bc-btn-green" data-cmd="start listening">🟢 Wake Up</button>
+        <button class="bc-cmd-btn bc-btn-red" data-cmd="go to sleep">🔴 Sleep</button>
+        <button class="bc-cmd-btn" data-cmd="where am I">📍 Where Am I</button>
+        <button class="bc-cmd-btn" data-cmd="find bugs">🐛 Find Bugs</button>
+        <button class="bc-cmd-btn" data-cmd="fix it">🔧 Fix It</button>
+        <button class="bc-cmd-btn bc-btn-green" data-cmd="confirm">✅ Confirm</button>
+        <button class="bc-cmd-btn bc-btn-red" data-cmd="reject">❌ Reject</button>
+        <button class="bc-cmd-btn" data-cmd="stop talking">🤫 Stop Talking</button>
+        <button class="bc-cmd-btn" data-cmd="repeat">🔁 Repeat</button>
+        <button class="bc-cmd-btn" data-cmd="undo">↩️ Undo</button>
+        <button class="bc-cmd-btn" data-cmd="create checkpoint">💾 Checkpoint</button>
+        <button class="bc-cmd-btn" data-cmd="explain this">💡 Explain</button>
+      </div>
     </div>
   </div>
   <script nonce="${nonce}" src="${scriptUri}"></script>

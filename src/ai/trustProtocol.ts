@@ -6,6 +6,7 @@ interface PendingChange {
   rawResponse: string;
   editor: vscode.TextEditor;
   timestamp: number;
+  replacementText?: string;
 }
 
 /**
@@ -25,12 +26,13 @@ export class TrustProtocol {
   /**
    * Propose a change. Stores it in pending state — never auto-applies.
    */
-  propose(aiResponse: string, editor: vscode.TextEditor): void {
+  propose(aiResponse: string, editor: vscode.TextEditor, replacementText?: string): void {
     this.pending = {
       description: aiResponse,
       rawResponse: aiResponse,
       editor,
       timestamp: Date.now(),
+      replacementText
     };
   }
 
@@ -59,21 +61,33 @@ export class TrustProtocol {
     }
 
     try {
-      // Layer 4: Auto checkpoint before applying
+      // Layer 4: Auto checkpoint before applying (non-blocking)
       const checkpointName = `auto-${Date.now()}`;
-      await this.checkpointManager.create(checkpointName);
-
-      // Apply the change (the AI response describes what to do)
-      // For now, we insert the AI's suggested code at cursor position
-      // In a full implementation, this would parse the AI's structured response
-      const editor = this.pending.editor;
-      if (editor && editor.document) {
-        // The AI response is spoken but the actual code edit
-        // would need structured output from the AI.
-        // For MVP, we acknowledge the confirmation.
+      try {
+        await this.checkpointManager.create(checkpointName);
+      } catch (cpErr) {
+        console.warn('[BlindCode] Checkpoint failed (non-fatal):', cpErr);
       }
 
-      const result = `Done. Change applied. Checkpoint saved as "${checkpointName}". You can say "undo" to revert.`;
+      // Apply the change directly to the file!
+      const editor = this.pending.editor;
+      if (editor && editor.document && this.pending.replacementText) {
+        const fullRange = new vscode.Range(
+          editor.document.positionAt(0),
+          editor.document.positionAt(editor.document.getText().length)
+        );
+        const edit = new vscode.WorkspaceEdit();
+        edit.replace(editor.document.uri, fullRange, this.pending.replacementText);
+        const applied = await vscode.workspace.applyEdit(edit);
+        if (applied) {
+          await editor.document.save();
+        } else {
+          this.pending = null;
+          return 'Failed to apply the edit to the file.';
+        }
+      }
+
+      const result = `Done. Change applied successfully. You can say "undo" to revert.`;
       this.pending = null;
       return result;
     } catch (err) {

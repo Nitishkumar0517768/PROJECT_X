@@ -68,7 +68,97 @@
     osc.stop(now + duration);
   }
 
+  // ─── Audio Visualizer ─────────────────────────────────────────────
+  const visualizerCanvas = document.getElementById('visualizer');
+  let visualizerActive = false;
+  let analyser = null;
+  let dataArray = null;
+  let canvasCtx = null;
+
+  async function startVisualizer() {
+    if (visualizerActive || !visualizerCanvas) return;
+    
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+      
+      // Force 16kHz sample rate for AssemblyAI
+      const ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 16000 });
+      if (!audioCtx) audioCtx = ctx;
+
+      const source = ctx.createMediaStreamSource(stream);
+      
+      // Visualizer
+      analyser = ctx.createAnalyser();
+      analyser.fftSize = 64; 
+      source.connect(analyser);
+      
+      const bufferLength = analyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
+      canvasCtx = visualizerCanvas.getContext('2d');
+      visualizerCanvas.style.display = 'block';
+      visualizerActive = true;
+      
+      drawVisualizer();
+
+      // Audio Capture for AssemblyAI Streaming (PCM 16-bit)
+      const processor = ctx.createScriptProcessor(4096, 1, 1);
+      source.connect(processor);
+      processor.connect(ctx.destination);
+
+      processor.onaudioprocess = (e) => {
+        const float32Array = e.inputBuffer.getChannelData(0);
+        const int16Array = new Int16Array(float32Array.length);
+        for (let i = 0; i < float32Array.length; i++) {
+          let s = Math.max(-1, Math.min(1, float32Array[i]));
+          int16Array[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+        }
+        
+        // Convert to Base64 string
+        const buffer = new Uint8Array(int16Array.buffer);
+        let binary = '';
+        for (let i = 0; i < buffer.byteLength; i++) {
+          binary += String.fromCharCode(buffer[i]);
+        }
+        const base64 = window.btoa(binary);
+        
+        vscode.postMessage({ type: 'audioStreamChunk', data: base64 });
+      };
+
+    } catch (err) {
+      console.warn("[BlindCode] Could not start Web Audio visualizer/capture:", err);
+    }
+  }
+
+  function drawVisualizer() {
+    if (!visualizerActive) return;
+    requestAnimationFrame(drawVisualizer);
+    
+    analyser.getByteFrequencyData(dataArray);
+    
+    // Clear canvas
+    canvasCtx.fillStyle = '#1e1e1e';
+    canvasCtx.fillRect(0, 0, visualizerCanvas.width, visualizerCanvas.height);
+    
+    const barWidth = (visualizerCanvas.width / dataArray.length) * 2.5;
+    let barHeight;
+    let x = 0;
+    
+    for (let i = 0; i < dataArray.length; i++) {
+      // Scale height to fit canvas
+      barHeight = (dataArray[i] / 255) * visualizerCanvas.height;
+      
+      // Dynamic color based on frequency/height
+      canvasCtx.fillStyle = `rgb(${barHeight + 100}, 200, 100)`;
+      canvasCtx.fillRect(x, visualizerCanvas.height - barHeight, barWidth, barHeight);
+      
+      x += barWidth + 1;
+    }
+  }
+
   // ─── Message Handler ──────────────────────────────────────────────
+  const volumeBar = document.getElementById('volume-bar');
+  const micIndicator = document.getElementById('mic-indicator');
+
   window.addEventListener('message', function (event) {
     const msg = event.data;
     switch (msg.type) {
@@ -81,14 +171,49 @@
       case 'showTranscript':
         if (transcriptEl) transcriptEl.textContent = msg.text;
         break;
+      case 'showResponse':
+        if (responseEl) responseEl.textContent = msg.text;
+        break;
+      case 'micReady':
+        if (statusEl) statusEl.textContent = '🟢 Mic Active';
+        if (micLabel) micLabel.textContent = '🎤 Listening — speak now!';
+        if (micLabel) micLabel.style.color = '#4ec94e';
+        if (micIndicator) micIndicator.classList.add('active');
+        // Native mic is handled by backend, no startVisualizer() needed here
+        break;
+      case 'micLevel':
+        if (volumeBar) {
+          volumeBar.style.width = msg.level + '%';
+          // Dim the bar if level is low, brighten if high
+          volumeBar.style.opacity = 0.3 + (msg.level / 100) * 0.7;
+        }
+        break;
       case 'configure':
         if (msg.volume !== undefined) volume = msg.volume;
         break;
     }
   });
 
+  // ─── Command Button Clicks ────────────────────────────────────────
+  document.querySelectorAll('.bc-cmd-btn').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      const cmd = btn.getAttribute('data-cmd');
+      if (cmd) {
+        if (transcriptEl) transcriptEl.textContent = '🖱️ "' + cmd + '"';
+        vscode.postMessage({ type: 'buttonCommand', command: cmd });
+        // Visual feedback
+        btn.style.transform = 'scale(0.95)';
+        btn.style.opacity = '0.7';
+        setTimeout(function () {
+          btn.style.transform = '';
+          btn.style.opacity = '';
+        }, 200);
+      }
+    });
+  });
+
   // ─── Init ─────────────────────────────────────────────────────────
-  if (statusEl) statusEl.textContent = 'Starting system mic...';
-  if (micLabel) micLabel.textContent = 'System microphone loading...';
+  if (statusEl) statusEl.textContent = '⏳ Starting mic...';
+  if (micLabel) micLabel.textContent = '🔄 System microphone loading...';
   vscode.postMessage({ type: 'ready' });
 })();

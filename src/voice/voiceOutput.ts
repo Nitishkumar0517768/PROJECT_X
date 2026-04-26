@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { spawn } from 'child_process';
+import { EventEmitter } from 'events';
 import { BlindCodeConfig } from '../config';
 
 /**
@@ -7,7 +8,7 @@ import { BlindCodeConfig } from '../config';
  * No webview dependency. Works even without sidebar panel open.
  * Also tries webview SpeechSynthesis as secondary option.
  */
-export class VoiceOutput {
+export class VoiceOutput extends EventEmitter {
   private webview: vscode.Webview | undefined;
   private lastText: string = '';
   private currentProcess: any = null;
@@ -21,10 +22,8 @@ export class VoiceOutput {
     if (!text) return;
     this.lastText = text;
 
-    // Cancel current speech if high priority
-    if (priority === 'high') {
-      this.cancel();
-    }
+    // Always cancel current speech to prevent overlapping voices
+    this.cancel();
 
     // Primary: System TTS via PowerShell (Windows)
     this.speakViaSystem(text);
@@ -88,17 +87,23 @@ export class VoiceOutput {
     `.trim();
 
     try {
+      this.emit('start');
       this.currentProcess = spawn('powershell', ['-NoProfile', '-Command', psScript], {
         stdio: 'ignore',
         windowsHide: true,
       });
-      this.currentProcess.on('exit', () => { this.currentProcess = null; });
+      this.currentProcess.on('exit', () => { 
+        this.currentProcess = null; 
+        this.emit('end');
+      });
       this.currentProcess.on('error', (err: any) => {
         console.error('[BlindCode] System TTS failed:', err);
         this.currentProcess = null;
+        this.emit('end');
       });
     } catch (err) {
       console.error('[BlindCode] Could not start system TTS:', err);
+      this.emit('end');
     }
   }
 }

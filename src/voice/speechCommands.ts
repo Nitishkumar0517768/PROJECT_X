@@ -24,6 +24,8 @@ export class SpeechCommandRegistry {
     this.commands.set(['reject', 'no', 'don\'t do that', 'cancel', 'never mind', 'skip'], 'reject');
 
     // Speech control
+    this.commands.set(['start listening', 'wake up', 'listen to me'], 'startListening');
+    this.commands.set(['stop listening', 'go to sleep', 'ignore me', 'pause listening'], 'stopListening');
     this.commands.set(['repeat that', 'say again', 'what did you say', 'repeat'], 'repeatLast');
     this.commands.set(['stop talking', 'shut up', 'be quiet', 'stop', 'silence'], 'stopSpeaking');
     this.commands.set(['slower', 'slow down', 'speak slower'], 'slower');
@@ -49,6 +51,7 @@ export class SpeechCommandRegistry {
   match(transcript: string): string | null {
     const normalized = transcript.toLowerCase().trim().replace(/[?.!,]/g, '');
 
+    // Pass 1: exact phrase or substring match
     for (const [phrases, command] of this.commands.entries()) {
       for (const phrase of phrases) {
         if (normalized === phrase || normalized.includes(phrase)) {
@@ -56,6 +59,25 @@ export class SpeechCommandRegistry {
         }
       }
     }
-    return null;
+
+    // Pass 2: keyword overlap — handles accent-garbled input
+    // e.g. "if enough is enough" still matches "where am i" via shared words
+    const transcriptWords = new Set(normalized.split(/\s+/));
+    let bestCommand: string | null = null;
+    let bestOverlap = 0;
+
+    for (const [phrases, command] of this.commands.entries()) {
+      for (const phrase of phrases) {
+        const phraseWords = phrase.split(/\s+/);
+        const overlap = phraseWords.filter(w => transcriptWords.has(w) && w.length > 2).length;
+        const score = phraseWords.length > 0 ? overlap / phraseWords.length : 0;
+        if (overlap >= 1 && score >= 0.5 && overlap > bestOverlap) {
+          bestOverlap = overlap;
+          bestCommand = command;
+        }
+      }
+    }
+
+    return bestCommand;
   }
 }

@@ -58,10 +58,32 @@ body {
 
 .bc-mic-indicator {
   display: flex;
-  align-items: center;
-  gap: 10px;
+  flex-direction: column;
+  gap: 8px;
   padding: 6px 0;
   transition: all 0.3s ease;
+}
+
+.mic-status-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.volume-bar-container {
+  width: 100%;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 2px;
+  overflow: hidden;
+  margin-top: 4px;
+}
+
+.volume-bar {
+  height: 100%;
+  width: 0%;
+  background: var(--bc-green);
+  transition: width 0.05s linear;
 }
 
 .bc-mic-indicator .mic-icon {
@@ -105,27 +127,72 @@ body {
   white-space: pre-wrap;
 }
 
-.bc-shortcuts {
+.bc-commands-guide {
   border-top: 1px solid var(--bc-border);
-  padding-top: 10px;
+  padding-top: 12px;
 }
 
-.bc-shortcuts p {
+.bc-guide-title {
   font-size: 11px;
+  font-weight: 600;
   color: var(--bc-muted);
-  margin-bottom: 4px;
-  display: flex;
-  gap: 8px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
 }
 
-kbd {
+.bc-btn-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+}
+
+.bc-cmd-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 7px 8px;
+  font-size: 11px;
+  font-family: var(--vscode-font-family, 'Segoe UI', system-ui, sans-serif);
+  color: var(--bc-text);
   background: var(--bc-surface);
   border: 1px solid var(--bc-border);
-  border-radius: 3px;
-  padding: 1px 5px;
-  font-size: 10px;
-  font-family: var(--vscode-editor-font-family, monospace);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bc-cmd-btn:hover {
+  background: rgba(137, 180, 250, 0.15);
+  border-color: var(--bc-accent);
   color: var(--bc-accent);
-  min-width: 50px;
-  text-align: center;
+  transform: translateY(-1px);
+}
+
+.bc-cmd-btn:active {
+  transform: scale(0.96);
+}
+
+.bc-cmd-btn.bc-btn-green {
+  border-color: rgba(166, 227, 161, 0.3);
+  color: var(--bc-green);
+}
+
+.bc-cmd-btn.bc-btn-green:hover {
+  background: rgba(166, 227, 161, 0.15);
+  border-color: var(--bc-green);
+}
+
+.bc-cmd-btn.bc-btn-red {
+  border-color: rgba(243, 139, 168, 0.3);
+  color: var(--bc-red);
+}
+
+.bc-cmd-btn.bc-btn-red:hover {
+  background: rgba(243, 139, 168, 0.15);
+  border-color: var(--bc-red);
 }
