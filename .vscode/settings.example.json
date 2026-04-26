@@ -1,0 +1,8 @@
+{
+  "blindcode.geminiApiKey": "YOUR_GEMINI_API_KEY_HERE",
+  "blindcode.groqApiKey": "YOUR_GROQ_API_KEY_HERE",
+  "blindcode.speechRate": 0.85,
+  "blindcode.audioVolume": 0.6,
+  "blindcode.spatialAudioEnabled": true,
+  "blindcode.primaryAiProvider": "gemini"
+}

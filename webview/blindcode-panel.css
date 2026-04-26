@@ -1,0 +1,131 @@
+/* BlindCode Sidebar Panel Styles */
+:root {
+  --bc-bg: var(--vscode-sideBar-background, #1e1e2e);
+  --bc-text: var(--vscode-sideBar-foreground, #cdd6f4);
+  --bc-accent: #89b4fa;
+  --bc-green: #a6e3a1;
+  --bc-red: #f38ba8;
+  --bc-surface: var(--vscode-input-background, #313244);
+  --bc-border: var(--vscode-panel-border, #45475a);
+  --bc-muted: #6c7086;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--vscode-font-family, 'Segoe UI', system-ui, sans-serif);
+  font-size: var(--vscode-font-size, 13px);
+  color: var(--bc-text);
+  background: var(--bc-bg);
+  padding: 12px;
+  line-height: 1.5;
+}
+
+#blindcode-root {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.bc-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 10px;
+  border-bottom: 1px solid var(--bc-border);
+}
+
+.bc-header h2 {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--bc-accent);
+  letter-spacing: 0.5px;
+}
+
+.bc-status {
+  font-size: 11px;
+  color: var(--bc-green);
+  background: rgba(166, 227, 161, 0.1);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.bc-section {
+  background: var(--bc-surface);
+  border-radius: 8px;
+  padding: 10px 12px;
+}
+
+.bc-mic-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 0;
+  transition: all 0.3s ease;
+}
+
+.bc-mic-indicator .mic-icon {
+  font-size: 20px;
+  opacity: 0.5;
+  transition: opacity 0.3s, transform 0.3s;
+}
+
+.bc-mic-indicator.active .mic-icon {
+  opacity: 1;
+  animation: pulse 1.2s infinite;
+}
+
+.bc-mic-indicator .mic-label {
+  font-size: 12px;
+  color: var(--bc-muted);
+}
+
+.bc-mic-indicator.active .mic-label {
+  color: var(--bc-green);
+  font-weight: 600;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.15); }
+}
+
+.bc-transcript {
+  font-size: 12px;
+  color: var(--bc-accent);
+  min-height: 20px;
+  word-break: break-word;
+}
+
+.bc-response {
+  font-size: 12px;
+  color: var(--bc-text);
+  min-height: 20px;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+.bc-shortcuts {
+  border-top: 1px solid var(--bc-border);
+  padding-top: 10px;
+}
+
+.bc-shortcuts p {
+  font-size: 11px;
+  color: var(--bc-muted);
+  margin-bottom: 4px;
+  display: flex;
+  gap: 8px;
+}
+
+kbd {
+  background: var(--bc-surface);
+  border: 1px solid var(--bc-border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  font-size: 10px;
+  font-family: var(--vscode-editor-font-family, monospace);
+  color: var(--bc-accent);
+  min-width: 50px;
+  text-align: center;
+}

@@ -1,0 +1,120 @@
+{
+  "name": "blindcode",
+  "displayName": "BlindCode",
+  "description": "The first IDE experience built for blind developers. Spatial audio navigation, conversational AI co-pilot, and a trust protocol that keeps you in control.",
+  "version": "1.0.0",
+  "publisher": "blindcode-team",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other", "Education"],
+  "keywords": ["accessibility", "blind", "visually impaired", "spatial audio", "voice coding"],
+  "activationEvents": ["onStartupFinished"],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "blindcode",
+          "title": "BlindCode",
+          "icon": "$(eye-closed)"
+        }
+      ]
+    },
+    "views": {
+      "blindcode": [
+        {
+          "type": "webview",
+          "id": "blindcode.panel",
+          "name": "BlindCode"
+        }
+      ]
+    },
+    "commands": [
+      { "command": "blindcode.pushToTalk", "title": "BlindCode: Push to Talk", "icon": "$(mic)" },
+      { "command": "blindcode.whereAmI", "title": "BlindCode: Where Am I?" },
+      { "command": "blindcode.findBugs", "title": "BlindCode: Find Bugs" },
+      { "command": "blindcode.fixIt", "title": "BlindCode: Fix Current Issue" },
+      { "command": "blindcode.confirm", "title": "BlindCode: Confirm Change" },
+      { "command": "blindcode.reject", "title": "BlindCode: Reject Change" },
+      { "command": "blindcode.repeatLast", "title": "BlindCode: Repeat Last Response" },
+      { "command": "blindcode.stopSpeaking", "title": "BlindCode: Stop Speaking" },
+      { "command": "blindcode.slower", "title": "BlindCode: Slower Speech" },
+      { "command": "blindcode.faster", "title": "BlindCode: Faster Speech" },
+      { "command": "blindcode.spellItOut", "title": "BlindCode: Spell It Out" },
+      { "command": "blindcode.dropLandmark", "title": "BlindCode: Drop Landmark Here" },
+      { "command": "blindcode.goToLandmark", "title": "BlindCode: Go To Landmark" },
+      { "command": "blindcode.toggleAudio", "title": "BlindCode: Toggle Spatial Audio" },
+      { "command": "blindcode.createCheckpoint", "title": "BlindCode: Create Checkpoint" },
+      { "command": "blindcode.restoreCheckpoint", "title": "BlindCode: Restore Checkpoint" }
+    ],
+    "keybindings": [
+      { "command": "blindcode.pushToTalk", "key": "alt+b", "when": "editorTextFocus || blindcode.panelFocus" },
+      { "command": "blindcode.whereAmI", "key": "alt+w", "when": "editorTextFocus" },
+      { "command": "blindcode.findBugs", "key": "alt+d", "when": "editorTextFocus" },
+      { "command": "blindcode.confirm", "key": "alt+y" },
+      { "command": "blindcode.reject", "key": "alt+n" },
+      { "command": "blindcode.repeatLast", "key": "alt+r" },
+      { "command": "blindcode.stopSpeaking", "key": "alt+s" },
+      { "command": "blindcode.dropLandmark", "key": "alt+l", "when": "editorTextFocus" },
+      { "command": "blindcode.toggleAudio", "key": "alt+a" }
+    ],
+    "configuration": {
+      "title": "BlindCode",
+      "properties": {
+        "blindcode.geminiApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Google Gemini API Key (free from aistudio.google.com)"
+        },
+        "blindcode.groqApiKey": {
+          "type": "string",
+          "default": "",
+          "description": "Groq API Key (free fallback AI)"
+        },
+        "blindcode.speechRate": {
+          "type": "number",
+          "default": 0.85,
+          "minimum": 0.3,
+          "maximum": 3.0,
+          "description": "Speech output rate (0.3 = very slow, 3.0 = very fast)"
+        },
+        "blindcode.audioVolume": {
+          "type": "number",
+          "default": 0.6,
+          "minimum": 0.0,
+          "maximum": 1.0,
+          "description": "Spatial audio volume"
+        },
+        "blindcode.spatialAudioEnabled": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable spatial audio feedback on cursor movement"
+        },
+        "blindcode.primaryAiProvider": {
+          "type": "string",
+          "enum": ["gemini", "groq"],
+          "default": "gemini",
+          "description": "Primary AI provider"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "package": "vsce package",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@google/generative-ai": "^0.21.0",
+    "groq-sdk": "^0.8.0"
+  },
+  "devDependencies": {
+    "@types/vscode": "^1.85.0",
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "esbuild": "^0.20.0"
+  }
+}

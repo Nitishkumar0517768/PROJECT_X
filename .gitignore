@@ -1,0 +1,19 @@
+node_modules/
+dist/
+*.vsix
+.vscode-test/
+.vscode/settings.json
+
+# Test/debug scripts
+test_*.ps1
+test_*.ts
+test_*.js
+diagnose_*.ps1
+
+# API keys (NEVER commit these)
+AIzaSy*
+gsk_*
+
+# OS files
+.DS_Store
+Thumbs.db
