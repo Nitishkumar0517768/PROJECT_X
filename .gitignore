@@ -9,6 +9,7 @@ test_*.ps1
 test_*.ts
 test_*.js
 diagnose_*.ps1
+extract_script.js
 
 # API keys (NEVER commit these)
 AIzaSy*

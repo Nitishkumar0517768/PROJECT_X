@@ -62,6 +62,7 @@ class BlindCodeViewProvider implements vscode.WebviewViewProvider {
     this.errorNarrator = new ErrorNarrator(this.aiClient, this.contextBuilder);
     this.whisperClient = new WhisperClient();
     this.speechListener = new SystemSpeechListener();
+    this.speechListener.setExtensionPath(this._extensionUri.fsPath);
   }
 
   /**
