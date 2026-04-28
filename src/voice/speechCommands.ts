@@ -14,10 +14,15 @@ export class SpeechCommandRegistry {
     this.commands.set(['where am i', 'where am i?', 'my location', 'current position'], 'whereAmI');
 
     // Diagnosis
-    this.commands.set(['find bugs', 'does anything look wrong', 'what\'s wrong', 'what is wrong', 'find errors', 'any issues', 'what\'s broken'], 'findBugs');
+    this.commands.set([
+      'find bugs', 'does anything look wrong', "what's wrong", 'what is wrong', 
+      'find errors', 'any issues', "what's broken", 'is there any bug', 'check for bugs', 'is there a bug'
+    ], 'findBugs');
 
     // Fix
-    this.commands.set(['fix it', 'fix this', 'repair it', 'fix the bug', 'fix the error'], 'fixIt');
+    this.commands.set([
+      'fix it', 'fix this', 'repair it', 'fix the bug', 'fix the error', 'fix issues', 'can you fix'
+    ], 'fixIt');
 
     // Trust protocol
     this.commands.set(['confirm', 'yes', 'apply it', 'do it', 'go ahead', 'apply'], 'confirm');
@@ -27,7 +32,7 @@ export class SpeechCommandRegistry {
     this.commands.set(['start listening', 'wake up', 'listen to me'], 'startListening');
     this.commands.set(['stop listening', 'go to sleep', 'ignore me', 'pause listening'], 'stopListening');
     this.commands.set(['repeat that', 'say again', 'what did you say', 'repeat'], 'repeatLast');
-    this.commands.set(['stop talking', 'shut up', 'be quiet', 'stop', 'silence'], 'stopSpeaking');
+    this.commands.set(['stop talking', 'shut up', 'be quiet', 'stop speaking', 'silence'], 'stopSpeaking');
     this.commands.set(['slower', 'slow down', 'speak slower'], 'slower');
     this.commands.set(['faster', 'speed up', 'speak faster'], 'faster');
     this.commands.set(['spell it out', 'spell it', 'character by character'], 'spellItOut');
@@ -54,30 +59,15 @@ export class SpeechCommandRegistry {
     // Pass 1: exact phrase or substring match
     for (const [phrases, command] of this.commands.entries()) {
       for (const phrase of phrases) {
-        if (normalized === phrase || normalized.includes(phrase)) {
+        // We require the phrase to be a distinct word boundary match to avoid accidental triggers
+        // e.g. "stop" should not trigger on "nonstop"
+        const regex = new RegExp(`(^|\\s)${phrase}(\\s|$)`);
+        if (regex.test(normalized)) {
           return command;
         }
       }
     }
 
-    // Pass 2: keyword overlap — handles accent-garbled input
-    // e.g. "if enough is enough" still matches "where am i" via shared words
-    const transcriptWords = new Set(normalized.split(/\s+/));
-    let bestCommand: string | null = null;
-    let bestOverlap = 0;
-
-    for (const [phrases, command] of this.commands.entries()) {
-      for (const phrase of phrases) {
-        const phraseWords = phrase.split(/\s+/);
-        const overlap = phraseWords.filter(w => transcriptWords.has(w) && w.length > 2).length;
-        const score = phraseWords.length > 0 ? overlap / phraseWords.length : 0;
-        if (overlap >= 1 && score >= 0.5 && overlap > bestOverlap) {
-          bestOverlap = overlap;
-          bestCommand = command;
-        }
-      }
-    }
-
-    return bestCommand;
+    return null;
   }
 }

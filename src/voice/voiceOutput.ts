@@ -34,9 +34,11 @@ export class VoiceOutput extends EventEmitter {
 
   /** Cancel current speech */
   cancel(): void {
-    // Kill running PowerShell TTS process
+    // Kill running PowerShell TTS process and its children forcefully
     if (this.currentProcess) {
-      try { this.currentProcess.kill(); } catch {}
+      try {
+        spawn('taskkill', ['/pid', this.currentProcess.pid.toString(), '/t', '/f'], { windowsHide: true });
+      } catch {}
       this.currentProcess = null;
     }
     // Also cancel webview speech

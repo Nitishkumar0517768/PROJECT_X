@@ -150,7 +150,7 @@ CRITICAL RULES:
 - The developer CANNOT see the screen at all
 - Use spatial language
 - Keep speech under 4 sentences
-- You MUST respond with ONLY a valid JSON object, no markdown fences, no extra text
+- You MUST respond in the EXACT format specified below.
 
 CONTEXT:
 ${context.substring(0, 500)}
@@ -162,29 +162,39 @@ ${truncatedCode}
 
 USER REQUEST: "${instruction}"
 
-Respond with ONLY this JSON object (no markdown, no backticks around it):
-{
-  "speech": "Brief description of what you fixed",
-  "newCode": "the complete corrected file content"
-}`;
+Respond with EXACTLY this format, do not deviate:
+
+SPEECH: Brief description of what you fixed
+
+CODE:
+\`\`\`
+(the complete corrected file content goes here)
+\`\`\`
+`;
 
     const parseResponse = (text: string) => {
       try {
-        // Try to find JSON in the response
-        // Remove markdown code fences if present
-        let cleaned = text.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim();
-        const match = cleaned.match(/\{[\s\S]*\}/);
-        if (match) {
-          const parsed = JSON.parse(match[0]);
-          if (parsed.newCode && parsed.newCode.length > 10) {
+        const speechMatch = text.match(/SPEECH:\s*([\s\S]*?)\n*CODE:/i);
+        // Match code block with or without language identifier, or fallback to grabbing everything after CODE:
+        const codeMatch = text.match(/CODE:\s*```[a-z]*\n([\s\S]*?)```/i) || text.match(/CODE:\s*([\s\S]*)$/i);
+        
+        if (speechMatch && codeMatch) {
+          const speech = speechMatch[1].trim();
+          let newCode = codeMatch[1].trim();
+          
+          if (newCode.startsWith('\`\`\`')) {
+            newCode = newCode.replace(/^```[a-z]*\n/, '').replace(/```$/, '').trim();
+          }
+          
+          if (newCode.length > 10) {
             return {
-              speech: parsed.speech || "I have prepared the change.",
-              newCode: parsed.newCode
+              speech: speech || "I have prepared the change.",
+              newCode: newCode
             };
           }
         }
       } catch (parseErr) {
-        console.error('[BlindCode] JSON parse failed:', parseErr, 'Raw text:', text.substring(0, 200));
+        console.error('[BlindCode] Parse failed:', parseErr, 'Raw text:', text.substring(0, 200));
       }
       return null;
     };
@@ -264,7 +274,7 @@ Respond with ONLY this JSON object (no markdown, no backticks around it):
 
       const completion = await client.chat.completions.create({
         messages: [
-          { role: 'system', content: 'You are BlindCode, an AI co-pilot for a blind developer. You MUST respond with valid JSON only. No markdown, no explanation outside the JSON.' },
+          { role: 'system', content: 'You are BlindCode, an AI co-pilot for a blind developer. You MUST respond strictly in the requested SPEECH and CODE format.' },
           { role: 'user', content: prompt },
         ],
         model: 'llama-3.3-70b-versatile',

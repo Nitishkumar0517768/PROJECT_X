@@ -1,0 +1,1562 @@
+================================================================================
+                    BLINDCODE — PRODUCT REQUIREMENTS DOCUMENT
+                         Version 1.0 | Hackathon Edition
+                    "Every IDE ever built assumed you could see."
+================================================================================
+
+TABLE OF CONTENTS
+-----------------
+1.  Executive Summary
+2.  Problem Statement 
+3.  Vision & Missiong
+4.  Target Users
+5.  Product Overview
+6.  Platform Decision
+7.  Free Tech Stack (Complete)
+8.  System Architecture
+9.  Feature Requirements (Detailed)
+10. Spatial Audio Engine Specification
+11. AI Brain — 5 Layer Architecture
+12. Trust Protocol Specification
+13. Voice Input/Output Pipeline
+14. Navigation System
+15. Debugging System
+16. Collaborative Mode
+17. USP List (All 12)
+18. Edge Cases & Mitigations
+19. API Prompt Templates
+20. MVP Scope for Hackathon
+21. Demo Script (5-10 Minutes)
+22. Build Plan & Timeline
+23. Judge Q&A Defense Sheet
+24. File & Folder Structure
+
+
+================================================================================
+1. EXECUTIVE SUMMARY
+================================================================================
+
+BlindCode is a VS Code extension that transforms the coding experience for
+visually impaired developers. Unlike screen readers bolted onto sighted tools,
+BlindCode is architected from the ground up assuming zero vision. Code has
+spatial identity — depth, position, and texture communicated through audio.
+An AI co-pilot, wired directly into the VS Code runtime, navigates, diagnoses,
+and edits code through natural conversation. Every AI action passes through a
+4-layer spoken trust protocol — the developer retains full control at all times.
+
+Built entirely with free, open-source tools. $0 infrastructure cost.
+
+Target Event   : Hackathon (3000+ teams)
+Team Skill     : Software / AI Development
+Platform       : VS Code Extension
+Total Cost     : $0
+Demo Style     : Blindfolded live coding
+Demo Duration  : 5-10 minutes
+Expected Result: First Prize
+
+
+================================================================================
+2. PROBLEM STATEMENT
+================================================================================
+
+2.1 The Scale
+-------------
+- 253 million people globally are visually impaired (WHO)
+- 2.2 billion have some form of vision impairment
+- An estimated zero purpose-built IDEs exist for blind developers
+
+2.2 Current State is Broken
+----------------------------
+Every existing developer tool (VS Code, IntelliJ, Sublime, etc.) was designed
+assuming the user can see. Accessibility features are retrofitted patches:
+
+  - Screen readers (NVDA, JAWS, VoiceOver) describe what sighted developers
+    see — raw HTML aria labels, tab indexes, visual element names
+  - Navigating to a function in VS Code + NVDA requires 3+ minutes of
+    tab-pressing through raw accessibility tree
+  - GitHub Copilot and Claude Voice are general AI tools with no awareness
+    of cursor position, file structure, live errors, or project context
+  - No tool gives code spatial identity — blind developers read code
+    linearly, line by line, with no structural awareness
+
+2.3 The Result
+--------------
+Most visually impaired people never attempt software development. Not because
+of lack of intelligence or ambition — because the tooling excludes them
+entirely before they write a single line.
+
+2.4 The Opportunity
+-------------------
+BlindCode is not an accessibility patch. It is a new paradigm of how humans
+interact with code — one that happens to be designed for blind developers first,
+and will benefit all developers who want eyes-free coding.
+
+
+================================================================================
+3. VISION & MISSION
+================================================================================
+
+Vision:
+  A world where the ability to write software is not gated by the ability to see.
+
+Mission:
+  Build the first IDE where blind and sighted developers are equal contributors —
+  where code has shape, AI is a trusted co-pilot, and every developer has a
+  complete development environment from day one, for free.
+
+One-Line Pitch:
+  "Every IDE ever built assumed you could see. We didn't."
+
+
+================================================================================
+4. TARGET USERS
+================================================================================
+
+Primary User: Blind or Severely Visually Impaired Developer
+------------------------------------------------------------
+- Total or near-total vision loss
+- Currently using screen readers + standard IDEs (painful experience)
+- Knows how to code OR wants to learn
+- Frustrated by current tooling
+- Needs: Navigation, debugging, code writing, project management — all by voice
+
+Secondary User: Low Vision Developer
+-------------------------------------
+- Partial vision, eye strain, fatigue
+- Wants to reduce screen time while coding
+- Needs: Partial audio assistance, hybrid visual+audio mode
+
+Tertiary User: Eyes-Free Power Developer (Sighted)
+----------------------------------------------------
+- Commuting, multitasking, vision fatigue
+- Wants to review code without looking at screen
+- Needs: Audio code review, voice navigation, spoken diagnostics
+
+Collaborative User: Sighted Pair Programmer
+--------------------------------------------
+- Working alongside a blind developer
+- Needs: Real-time sync, equal contribution, no friction
+
+
+================================================================================
+5. PRODUCT OVERVIEW
+================================================================================
+
+BlindCode is a VS Code Extension consisting of 5 integrated subsystems:
+
+  [1] Spatial Audio Engine
+      Code as a 3D soundscape — depth, position, texture through audio
+
+  [2] Conversational AI Co-Pilot
+      Natural language development — speak intent, not commands
+
+  [3] Trust Protocol Layer
+      4-stage safety system — AI never acts without developer approval
+
+  [4] Code GPS Navigation
+      Spoken landmarks, breadcrumbs, directional movement through code
+
+  [5] Audio Debugger
+      Plain English error narration, variable states, execution replay
+
+All 5 subsystems work simultaneously and integrate with VS Code's Language
+Server Protocol for live access to errors, diagnostics, and file state.
+
+
+================================================================================
+6. PLATFORM DECISION
+================================================================================
+
+Platform: VS Code Extension (NOT a standalone IDE)
+
+Rationale:
+----------
+  [+] Judges recognize VS Code instantly — zero credibility gap needed
+  [+] Real developers already live here — immediate adoption path
+  [+] Extension API provides full access to files, errors, diagnostics
+  [+] Ships via one-click install — no friction during demo
+  [+] Language Server Protocol gives live runtime awareness
+  [+] $0 to build and $0 to publish on VS Code Marketplace
+  [+] Works on Windows, Mac, and Linux — no platform exclusion
+  [+] Existing VS Code accessibility foundation to extend, not fight
+
+What the Extension Adds:
+  - Intercepts all navigation events → converts to spatial audio
+  - Injects conversational AI sidebar panel
+  - Replaces visual error indicators with audio pulses
+  - Always-on voice command listener in background
+  - Named checkpoint system on top of Git
+  - Confidence-scored AI suggestion pipeline
+
+
+================================================================================
+7. FREE TECH STACK (COMPLETE)
+================================================================================
+
+Layer                 | Tool                        | Purpose              | Cost
+----------------------|-----------------------------|----------------------|-----
+IDE Base              | VS Code Extension API        | Core platform        | $0
+Voice Input (STT)     | OpenAI Whisper (local)       | Speech-to-text       | $0
+AI Brain              | Claude API free tier         | Code intelligence    | $0
+AI Fallback           | Gemini 1.5 Flash free        | Backup AI            | $0
+Text to Speech (TTS)  | Web Speech API (browser)     | Audio output         | $0
+Spatial Audio         | Howler.js (open source)      | 3D audio engine      | $0
+Code Analysis         | VS Code LSP                  | Live errors/AST      | $0
+AST Parser            | Tree-sitter                  | Code structure map   | $0
+Wake Word             | Porcupine free tier          | Always-on trigger    | $0
+Backend               | Python FastAPI (local)       | Pipeline connector   | $0
+Version/Checkpoints   | Git (local)                  | Named save points    | $0
+Package Manager       | npm / pip                    | Dependencies         | $0
+TOTAL                 |                              |                      | $0
+
+Version Details:
+  - Whisper: openai/whisper (GitHub, Apache 2.0 license) — runs 100% locally
+  - Howler.js: v2.2.x (MIT license)
+  - Tree-sitter: tree-sitter/tree-sitter (MIT license) — 40+ language grammars
+  - FastAPI: 0.100+ (MIT license)
+  - Porcupine: free tier supports 1 wake word with offline processing
+
+Installation Commands:
+  npm install howler                    # Spatial audio
+  pip install openai-whisper fastapi    # STT and backend
+  npm install --save tree-sitter        # AST parsing
+  pip install pvporcupine               # Wake word (free tier)
+
+
+================================================================================
+8. SYSTEM ARCHITECTURE
+================================================================================
+
+Complete Data Flow:
+-------------------
+
+  DEVELOPER SPEAKS
+        |
+        v
+  [PORCUPINE WAKE WORD DETECTOR]
+  "BlindCode" wake word triggers mic
+        |
+        v
+  [WHISPER STT — LOCAL]
+  Audio → transcript (offline, noise-filtered)
+        |
+        v
+  [INTENT PARSER — FastAPI]
+  Classifies intent into one of 5 action types:
+    NAVIGATE / EDIT / DIAGNOSE / QUERY / UNDO
+        |
+        +----------+----------+----------+----------+
+        v          v          v          v          v
+   [SPATIAL   [FILE OPS  [AI ENGINE [DIAGNOSE  [CHECKPOINT
+    AUDIO]    VS Code API] Claude/   VS Code    MANAGER
+   Howler.js             Gemini]    LSP]       Git]
+        |          |          |          |          |
+        +----------+----------+----------+----------+
+                             |
+                             v
+                  [TRUST PROTOCOL LAYER]
+                  Propose → Read Aloud → Score → Confirm
+                             |
+                             v
+                  [WEB SPEECH API — TTS]
+                  Spoken response to developer
+                             |
+                             v
+                  [DEVELOPER HEARS RESULT]
+
+
+Component Communication:
+  - VS Code Extension (TypeScript) ↔ FastAPI backend (Python) via localhost HTTP
+  - FastAPI ↔ Whisper (subprocess or direct Python import)
+  - FastAPI ↔ Claude API (HTTPS, free tier)
+  - FastAPI ↔ Tree-sitter (Python binding)
+  - VS Code Extension ↔ VS Code LSP (built-in extension API)
+  - VS Code Extension ↔ Howler.js (bundled with extension)
+  - VS Code Extension ↔ Web Speech API (VS Code webview)
+
+
+================================================================================
+9. FEATURE REQUIREMENTS (DETAILED)
+================================================================================
+
+9.1 MUST HAVE (Demo Critical)
+------------------------------
+
+F001 — Spatial Audio Navigation
+  Description: Code depth and file position expressed as real-time audio
+  Priority: P0
+  Demo Moment: Developer moves cursor, audio landscape shifts
+  Acceptance: Pitch changes with nesting, stereo pans with file position
+
+F002 — Conversational AI Co-Pilot
+  Description: Natural language interface to all IDE functions
+  Priority: P0
+  Demo Moment: "Where am I?" → Full spoken project map
+  Acceptance: Responds correctly to navigate/edit/debug intents
+
+F003 — Trust Protocol (Propose → Confirm)
+  Description: AI never applies changes without spoken confirmation
+  Priority: P0
+  Demo Moment: "Fix it" → AI proposes → reads aloud → waits
+  Acceptance: Zero modifications without "confirm" voice command
+
+F004 — Bug Discovery & Narration
+  Description: AI scans active file for errors, narrates in plain English
+  Priority: P0
+  Demo Moment: "Does anything look wrong?" → AI explains the bug
+  Acceptance: Correctly identifies null reference, reads affected line
+
+F005 — Voice Code Writing
+  Description: Developer dictates intent, AI writes and reads back code
+  Priority: P0
+  Demo Moment: Full function written and run without typing
+  Acceptance: Written code executes correctly
+
+9.2 SHOULD HAVE (Demo Enhancement)
+------------------------------------
+
+F006 — Conversational Undo
+  Description: Named checkpoints + spoken rollback command
+  Priority: P1
+  Command: "Undo everything since [named moment]"
+  Acceptance: Rolls back to correct state, narrates what was undone
+
+F007 — Code GPS Breadcrumbs
+  Description: Always-available spoken position in code structure
+  Priority: P1
+  Command: "Where am I?"
+  Acceptance: Returns file, function, line number, total lines
+
+F008 — Confidence Scoring
+  Description: AI states certainty level before every suggestion
+  Priority: P1
+  Output: "I'm 91% confident this is a null reference..."
+  Acceptance: Score accurately reflects actual AI certainty
+
+F009 — Error Navigation
+  Description: Move to error location by audio command
+  Priority: P1
+  Command: "Take me there" after AI identifies error
+  Acceptance: Cursor moves to error line, audio confirms arrival
+
+9.3 NICE TO HAVE (Impresses Judges)
+-------------------------------------
+
+F010 — Blind+Sighted Collaborative Mode
+  Description: Sighted dev sees code, blind dev hears it, both control same file
+  Priority: P2
+
+F011 — Code Emotion Detection
+  Description: AI proactively narrates code smell and complexity
+  Priority: P2
+  Trigger: Function > 40 lines, nesting > 4, detected duplication
+
+F012 — Spoken Onboarding Tour
+  Description: 3-minute audio introduction on first launch
+  Priority: P2
+
+F013 — Push-to-Talk Mode
+  Description: Hold key to activate mic instead of wake word
+  Priority: P2
+
+
+================================================================================
+10. SPATIAL AUDIO ENGINE SPECIFICATION
+================================================================================
+
+10.1 Pitch Mapping (Nesting Depth)
+------------------------------------
+  Depth 0 (global scope)   →  100 Hz  (deep, grounding tone)
+  Depth 1 (function)       →  200 Hz  (mid tone, comfortable)
+  Depth 2 (if/loop)        →  300 Hz  (higher, alert)
+  Depth 3 (nested block)   →  400 Hz  (high, warning signal)
+  Depth 4+ (deep nesting)  →  500 Hz+ (critical, complexity warning)
+
+10.2 Stereo Positioning (File Location)
+-----------------------------------------
+  Line 1 (top of file)     →  Hard left  (-1.0 stereo)
+  Line 50% (middle)        →  Center     ( 0.0 stereo)
+  Last line (bottom)       →  Hard right (+1.0 stereo)
+  Formula: stereo = (currentLine / totalLines) * 2 - 1
+
+10.3 Audio Texture (Syntax Type)
+----------------------------------
+  Normal code              →  Clean sine tone
+  Error                    →  Buzzing repeating pulse (3Hz)
+  Warning                  →  Soft intermittent buzz (1Hz)
+  Comment                  →  Soft chime (high, brief)
+  Function boundary        →  Sharp click (entry/exit)
+  Class definition         →  Warm sustained pad
+  Import statement         →  High bright ping
+  End of file              →  Descending tone sequence
+
+10.4 Movement Sounds
+---------------------
+  Moving down (next line)  →  Subtle tick sound
+  Moving up (prev line)    →  Reverse tick sound
+  Jumping to function      →  Whoosh + arrival chime
+  Entering a block         →  Pitch rises smoothly
+  Exiting a block          →  Pitch drops smoothly
+
+10.5 Implementation (Howler.js)
+---------------------------------
+
+  // Core spatial audio call
+  const sound = new Howl({
+    src: ['base-tone.mp3'],
+    stereo: calculateStereoPosition(currentLine, totalLines),
+    rate: calculatePitchRate(nestingDepth),    // rate multiplies base pitch
+    volume: 0.6
+  });
+  sound.play();
+
+  // Pitch rate table (rate * base frequency = perceived pitch)
+  Depth 0  →  rate: 1.0
+  Depth 1  →  rate: 1.5
+  Depth 2  →  rate: 2.0
+  Depth 3  →  rate: 2.5
+  Depth 4+ →  rate: 3.0
+
+  // Error pulse — plays on loop while error line is focused
+  const errorPulse = new Howl({
+    src: ['error-buzz.mp3'],
+    loop: true,
+    volume: 0.4
+  });
+
+10.6 Audio Files Required
+---------------------------
+  base-tone.mp3        —  500ms sine wave, 200Hz
+  error-buzz.mp3       —  200ms buzz, repeating
+  chime.mp3            —  100ms high chime
+  click.mp3            —  50ms sharp click
+  whoosh.mp3           —  300ms navigation whoosh
+  arrival.mp3          —  150ms arrival chime
+  warning-buzz.mp3     —  300ms soft intermittent buzz
+  eof-tone.mp3         —  600ms descending sequence
+
+  All audio files: generate free with Audacity or download from freesound.org
+
+
+================================================================================
+11. AI BRAIN — 5 LAYER ARCHITECTURE
+================================================================================
+
+11.1 Layer 1 — Project Context Injection
+------------------------------------------
+Every API call to Claude/Gemini automatically includes:
+
+  System Prompt Template:
+  -----------------------
+  You are BlindCode, an AI coding co-pilot for a blind developer.
+  The developer cannot see the screen. You must:
+  - Always describe code in plain spoken English, not visual terms
+  - Never say "as you can see" or "look at line X"
+  - Always narrate spatial relationships (inside, outside, above, below)
+  - State confidence level (0-100%) before every suggestion
+  - Keep responses concise — developer hears every word in real time
+  - Propose changes, never apply them — wait for "confirm"
+
+  Current Context (injected per request):
+  ----------------------------------------
+  File: {filename} ({total_lines} lines)
+  Position: Line {current_line}, Column {current_column}
+  Scope: Inside {current_function} → inside {current_class}
+  Errors: {error_list}
+  Warnings: {warning_list}
+  Last 5 Actions: {action_history}
+  Available Checkpoints: {checkpoint_names}
+  Surrounding Code (lines {n-5} to {n+5}):
+  {code_snippet}
+
+11.2 Layer 2 — Audio Intent Parser
+-------------------------------------
+Converts natural language to structured commands:
+
+  Input: Raw speech transcript
+  Output: JSON intent object
+
+  Intent Types and Examples:
+  ---------------------------
+  NAVIGATE
+    "Take me to the login function"
+    "Go to where I last edited"
+    "Jump to line 42"
+    → { type: "NAVIGATE", target: "function", name: "login" }
+
+  DIAGNOSE
+    "Does anything look wrong?"
+    "Something feels broken here"
+    "What's wrong with this function?"
+    → { type: "DIAGNOSE", scope: "current_function" }
+
+  EDIT
+    "Fix it"
+    "Add a null check before user.id"
+    "Make this function async"
+    → { type: "EDIT", description: "add null check", target: "user.id" }
+
+  QUERY
+    "What does this function do?"
+    "Where am I?"
+    "How complex is this code?"
+    → { type: "QUERY", question: "explain_function" }
+
+  UNDO
+    "Undo everything since I started this function"
+    "Go back to working login"
+    "Restore last checkpoint"
+    → { type: "UNDO", target: "named_checkpoint", name: "working login" }
+
+  Implementation:
+    Send raw transcript + context to AI with structured output prompt.
+    AI returns JSON. Parse and route to correct subsystem.
+
+11.3 Layer 3 — Confidence Calibrator
+---------------------------------------
+Post-processes every AI suggestion before speaking to developer:
+
+  High Confidence (>90%):
+    AI states suggestion directly.
+    "There's a null reference on line 14. I'm 91% confident.
+     Here's my fix: [reads change]. Should I apply this?"
+
+  Medium Confidence (60-90%):
+    AI flags uncertainty but still suggests.
+    "I see something on line 14 — I'm about 75% sure it's a null reference.
+     Want me to walk you through it so you can decide?"
+
+  Low Confidence (<60%):
+    AI declines to suggest, proposes investigation.
+    "Something looks unusual here but I'm only 45% confident.
+     I'd rather we investigate together than guess. Want to explore it?"
+
+  Implementation:
+    Add to system prompt: "Always end your response with CONFIDENCE:XX
+    where XX is your certainty percentage 0-100."
+    Parse this tag from response. Remove before speaking. Use score
+    to select response template above.
+
+11.4 Layer 4 — Spatial Mapper
+--------------------------------
+Translates Tree-sitter AST nodes to audio parameters:
+
+  Process:
+  1. Tree-sitter parses file into AST
+  2. For each node: extract type, depth, line range
+  3. Map node type → audio texture
+  4. Map depth → pitch rate
+  5. Map line number → stereo position
+  6. On cursor move: fetch node at cursor, compute audio params, play
+
+  Node Type → Audio Texture Map:
+    function_declaration  →  click (entry) + pitch rise
+    if_statement          →  subtle tone shift
+    for_statement         →  subtle tone shift
+    error (LSP)           →  error-buzz.mp3 loop
+    comment               →  chime.mp3
+    import_statement      →  ping sound
+    class_declaration     →  warm pad tone
+
+11.5 Layer 5 — Session Memory
+--------------------------------
+Maintains conversation context tied to code locations:
+
+  Memory Object (per session):
+  {
+    "changes": [
+      { "timestamp": 1234567890, "type": "edit", "description": "added null check",
+        "file": "checkout.js", "line": 14, "checkpoint": "null-fix-checkout" }
+    ],
+    "discussed_functions": ["processPayment", "validateUser"],
+    "resolved_errors": ["null reference line 14"],
+    "active_errors": ["type mismatch line 28"],
+    "checkpoints": [
+      { "name": "null-fix-checkout", "git_hash": "abc123", "timestamp": 1234567890 }
+    ],
+    "developer_preferences": {
+      "explanation_depth": "detailed",
+      "confirmation_style": "always_read_aloud"
+    }
+  }
+
+  Inject full memory object into every AI context call.
+  Persist to local JSON file during session.
+
+
+================================================================================
+12. TRUST PROTOCOL SPECIFICATION
+================================================================================
+
+The Trust Protocol is BlindCode's answer to the core fear:
+"What if AI gives wrong code and the blind developer can't see it?"
+
+4 Layers — All must pass before code changes:
+
+Layer 1 — PROPOSE (Never Auto-Apply)
+--------------------------------------
+  - AI generates change
+  - Change is stored in pending_change object
+  - Nothing is written to file yet
+  - AI speaks: "I'd like to [description]. Here's what I'll do: [reads change]"
+
+Layer 2 — READ ALOUD (Full Transparency)
+------------------------------------------
+  - Before asking for confirmation, AI reads the EXACT change character by character
+    if requested, or summarizes it clearly
+  - Developer hears exactly what will happen
+  - Commands available:
+    "Read it again"    → re-reads the proposed change
+    "Spell it out"     → reads character by character
+    "Show context"     → reads 3 lines before and after the change
+
+Layer 3 — CONFIDENCE SCORE (Calibrated Trust)
+------------------------------------------------
+  - AI states its certainty: "I'm 91% confident this is correct."
+  - If <80%: "I'm not fully certain — this is my best guess at 73%."
+  - Developer can factor this into their decision
+  - Developer can ask: "What could go wrong?" → AI lists potential issues
+
+Layer 4 — CHECKPOINT (Auto Safety Net)
+-----------------------------------------
+  - Before applying ANY change, auto-create a Git commit
+  - Name: auto-generated from timestamp + change description
+  - Developer can name it: "Call this checkpoint 'before big refactor'"
+  - To restore: "Go back to 'before big refactor'"
+
+Confirmation Commands:
+  "Confirm" / "Yes" / "Apply it"     →  Apply change, announce completion
+  "Reject" / "No" / "Don't do that"  →  Discard change, nothing changes
+  "Modify it" / "Change the..."      →  AI revises proposal, starts over
+  "Not now" / "Hold that"            →  Saves proposal for later
+
+Trust Protocol Flow Diagram:
+  Developer: "Fix it"
+       |
+       v
+  AI generates fix
+       |
+       v
+  [CREATE CHECKPOINT] ← silent, automatic
+       |
+       v
+  AI speaks: "I'll [description]. Confidence: 91%. Here's the change: [reads it]"
+       |
+       v
+  AI speaks: "Should I apply this?"
+       |
+       +---------> "Confirm"  →  Apply change → "Done. Checkpoint saved as [name]."
+       |
+       +---------> "Reject"   →  Discard → "Understood, nothing changed."
+       |
+       +---------> "Modify"   →  Revise → Start Trust Protocol again
+       |
+       +---------> silence    →  Wait indefinitely (never timeout and apply)
+
+
+================================================================================
+13. VOICE INPUT/OUTPUT PIPELINE
+================================================================================
+
+13.1 Voice Input (Speech to Text)
+-----------------------------------
+Tool: OpenAI Whisper (runs 100% locally, free, offline)
+
+Setup:
+  pip install openai-whisper
+  Model: "base" model — good accuracy, fast on CPU (39M parameters)
+  For better accuracy: "small" model (slower but worth it)
+
+  import whisper
+  model = whisper.load_model("base")
+  result = model.transcribe("audio_chunk.wav")
+  transcript = result["text"]
+
+Wake Word Integration:
+  - Porcupine detects "BlindCode" wake word
+  - On detection: start 5-second recording window
+  - Send recording to Whisper
+  - Return transcript to Intent Parser
+
+Push-to-Talk Fallback:
+  - VS Code keybinding: hold Alt+B to record
+  - Release to transcribe and process
+  - No wake word needed
+
+Noise Handling:
+  - Whisper's local model handles moderate background noise
+  - Add VAD (Voice Activity Detection) to trim silence
+  - pip install webrtcvad for additional noise filtering
+
+13.2 Voice Output (Text to Speech)
+------------------------------------
+Tool: Web Speech API (browser built-in, zero cost, zero latency)
+
+Implementation (in VS Code Webview):
+  function speak(text, priority = 'normal') {
+    // Cancel current speech if high priority
+    if (priority === 'high') {
+      window.speechSynthesis.cancel();
+    }
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = userPreferences.speechRate || 1.0;  // user-adjustable
+    utterance.pitch = 1.0;
+    utterance.volume = 1.0;
+    // Select best available voice
+    const voices = window.speechSynthesis.getVoices();
+    utterance.voice = voices.find(v => v.lang === 'en-US') || voices[0];
+    window.speechSynthesis.speak(utterance);
+  }
+
+Speech Commands (always available):
+  "Repeat that"           →  Re-speaks last AI response
+  "Slower"                →  speechRate -= 0.2
+  "Faster"                →  speechRate += 0.2
+  "Stop talking"          →  speechSynthesis.cancel()
+  "Spell it out"          →  Reads last response character by character
+
+
+================================================================================
+14. NAVIGATION SYSTEM
+================================================================================
+
+14.1 Code GPS — Always-Available Position
+-------------------------------------------
+Command: "Where am I?"
+Response: "[filename] — [function name], line [X] of [total]. [N] errors in this file."
+
+Example:
+  "You're in checkout.js — inside the processPayment function,
+   line 8 of 23. Two active errors in this file."
+
+14.2 Landmark Navigation
+--------------------------
+Landmarks are named audio beacons planted by the developer.
+
+Commands:
+  "Drop a landmark here, call it 'important part'"
+  "Take me to 'important part'"
+  "List my landmarks"
+  "Remove landmark 'important part'"
+
+Storage: landmarks.json in project root
+Format: { "name": "important part", "file": "checkout.js", "line": 14 }
+
+14.3 Function/Symbol Jump
+---------------------------
+Commands:
+  "Take me to the [function name] function"
+  "Go to [class name]"
+  "Find where [variable] is defined"
+  "Take me to the error"
+  "Go to the last place I edited"
+
+Implementation:
+  - Tree-sitter AST provides all symbol locations
+  - AI maps natural language name to nearest symbol
+  - VS Code API: vscode.window.activeTextEditor.selection = new Selection(line, col)
+
+14.4 File Structure Narration
+--------------------------------
+Command: "Tell me about this project"
+
+Response template:
+  "ShopApp has [N] files in [M] folders.
+   Currently open: [list files].
+   Most errors: [file with most errors].
+   You've been working most in: [most edited file]."
+
+Building metaphor (optional, for immersive mode):
+  Folders = floors, Files = rooms, Functions = furniture
+
+
+================================================================================
+15. DEBUGGING SYSTEM
+================================================================================
+
+15.1 Error Discovery
+---------------------
+Command: "Does anything look wrong?" / "Find bugs" / "What's broken?"
+
+Process:
+  1. Fetch all LSP diagnostics for current file
+  2. Pass diagnostics + code snippet to AI
+  3. AI ranks by severity, explains in plain English
+  4. Reads most critical error first
+  5. Asks: "Want me to walk you there?"
+
+Response Template:
+  "I found [N] issues. The most critical: [plain English description].
+   I'm [X]% confident about this. It's at line [N], inside [function name].
+   Want me to take you there?"
+
+15.2 Error Navigation
+----------------------
+  "Yes" / "Take me there"  →  Cursor moves to error line
+  On arrival: error-buzz.mp3 plays, AI reads the exact line
+  "Explain this"           →  AI explains why this specific code is problematic
+
+15.3 Plain English Stack Traces
+---------------------------------
+Command: "What happened?" / "Explain the crash" / "Replay the error"
+
+AI converts raw stack trace to narrative:
+  Raw: "TypeError: Cannot read property 'id' of undefined at processPayment (checkout.js:14)"
+  Spoken: "The crash happened in processPayment. On line 14, it tried to read
+           the 'id' field from an object called 'user', but user was undefined
+           — it was never set before this function ran."
+
+15.4 Variable State Narration
+--------------------------------
+Command: "What's in [variable]?" (during debug session)
+
+Response: "user is currently undefined. It was last set on line 8 as the
+          result of the getUserById call, which returned null."
+
+15.5 Execution Replay
+----------------------
+Command: "Walk me through what happened step by step"
+
+AI narrates execution path:
+  "The function started. Line 8 called getUserById — that returned null.
+   Line 11 called validateCart — that passed. Line 14 tried to access
+   user.id, but user was null from line 8. That's where it crashed."
+
+
+================================================================================
+16. COLLABORATIVE MODE
+================================================================================
+
+Blind + Sighted Real-Time Collaboration
+-----------------------------------------
+The only IDE where both contribute equally to the same file simultaneously.
+
+Sighted Developer Experience:
+  - Normal VS Code interface
+  - Sees code visually
+  - Types normally
+  - Optional: sees transcript of blind developer's voice commands
+
+Blind Developer Experience:
+  - Full BlindCode audio experience
+  - Hears sighted developer's changes narrated automatically
+  - "Your partner just added a function called validateDiscount on line 47.
+     Want me to explain it?"
+
+Sync Mechanism:
+  - VS Code Live Share (free) for real-time file sync
+  - BlindCode extension subscribes to document change events
+  - On external change: AI narrates what changed and where
+  - Both developers see/hear each other's cursor positions
+
+Auto-Narration of Partner Changes:
+  vscode.workspace.onDidChangeTextDocument(event => {
+    if (event.isExternalChange) {
+      const change = event.contentChanges[0];
+      narrate(`Your partner changed line ${change.range.start.line + 1}.
+               They ${getChangeSummary(change)}`);
+    }
+  });
+
+
+================================================================================
+17. USP LIST (ALL 12)
+================================================================================
+
+USP 1  — Ground-Up Blind-First
+  Not a patch. Every architectural decision made assuming zero vision.
+  Sighted developers are the edge case.
+
+USP 2  — Code Has Shape (Spatial Audio)
+  Code is not text read linearly. It's a 3D space with depth, position,
+  and texture. First IDE to make this real with audio.
+
+USP 3  — AI Wired to Runtime
+  Not a chatbot. AI sees live errors, live variable states, live execution
+  via LSP — not a pasted screenshot or description.
+
+USP 4  — 4-Layer Trust Protocol
+  Propose → Read aloud → Confidence score → Confirm/reject → Checkpoint.
+  AI never acts unilaterally. Full developer control at all times.
+
+USP 5  — Conversational Undo
+  "Undo everything since I started this function."
+  Spoken, natural, named. Not Ctrl+Z 47 times blindly.
+
+USP 6  — Error Confidence Scoring
+  AI tells you how certain it is before every suggestion.
+  Blind developers always know exactly how much to trust each call.
+
+USP 7  — Code Emotion Detection
+  AI notices complexity, duplication, code smell and narrates it proactively.
+  Blind devs now hear messy code the way sighted devs see it.
+
+USP 8  — Blind + Sighted Collaborative Mode
+  Only IDE where both contribute equally in real time. Equal development.
+
+USP 9  — Zero Learning Curve
+  First launch: 3-minute spoken environment tour.
+  No manual, no documentation. Just talk.
+
+USP 10 — Works Fully Offline
+  Whisper runs locally. Web Speech API is browser-native.
+  Core features need zero internet. Privacy-first by design.
+
+USP 11 — 40+ Programming Languages
+  Tree-sitter parses 40+ languages. Spatial audio rules are universal.
+  Whisper handles 99 spoken languages for commands.
+
+USP 12 — $0 Forever
+  Entire stack is free and open-source.
+  No vendor lock-in. Any blind developer anywhere can use this today.
+
+
+================================================================================
+18. EDGE CASES & MITIGATIONS
+================================================================================
+
+EDGE CASE 1: AI generates wrong code
+--------------------------------------
+Risk: Blind developer cannot visually verify — wrong code gets committed
+Mitigation:
+  - Trust Protocol Layer 1: AI never applies without "confirm"
+  - Trust Protocol Layer 2: AI reads every change aloud before applying
+  - Trust Protocol Layer 3: Confidence score — developer knows certainty
+  - Trust Protocol Layer 4: Auto checkpoint before every change
+  - Developer can say "spell it out" for character-by-character reading
+  - Developer can say "what could go wrong?" before confirming
+  - All changes are one voice command away from reverting
+
+Response to judges:
+  "A sighted developer can also commit broken code. BlindCode has 4 safety
+   nets that most sighted IDEs don't have."
+
+EDGE CASE 2: Developer mishears the AI's spoken suggestion
+------------------------------------------------------------
+Risk: Developer hears wrong information, confirms wrong change
+Mitigation:
+  - "Repeat that" — re-speaks last response at same speed
+  - "Slower" / "Faster" — adjusts speech rate permanently
+  - "Spell it out" — character-by-character verification
+  - TTS speed defaults to 0.85x (slightly slow) on first run
+  - Every change confirmed → checkpoint created → instant rollback available
+
+EDGE CASE 3: Noisy environment degrades voice input
+-----------------------------------------------------
+Risk: Whisper mishears commands, wrong actions triggered
+Mitigation:
+  - Push-to-talk mode: hold Alt+B, release to process (no mishearing)
+  - Whisper base model filters moderate background noise
+  - webrtcvad (Voice Activity Detection) trims silence and noise
+  - All voice commands also available as keyboard shortcuts
+  - Ambiguous commands ask for clarification: "Did you mean navigate or diagnose?"
+
+EDGE CASE 4: AI API unavailable or rate limited
+-------------------------------------------------
+Risk: Free tier limits hit, AI stops responding mid-demo
+Mitigation:
+  - Primary: Claude API free tier
+  - Fallback 1: Gemini 1.5 Flash free tier (automatic switch)
+  - Fallback 2: Local lightweight model (Ollama + CodeLlama free)
+  - For demo: pre-cache common responses, run against controlled test file
+  - API calls are lightweight — free tier sufficient for 10-minute demo
+
+EDGE CASE 5: "How is this different from Claude Voice / ChatGPT voice?"
+------------------------------------------------------------------------
+Claude Voice / ChatGPT Voice:
+  - General chatbot with a microphone
+  - No awareness of file structure, cursor position, or project
+  - No spatial audio navigation
+  - No connection to live errors or variable states
+  - No trust protocol
+  - One-shot Q&A, no session memory tied to code
+  - Built for everyone
+
+BlindCode:
+  - Surgical IDE instrument
+  - Knows exact cursor position in real time
+  - Spatial audio gives code a 3D shape
+  - Wired directly to VS Code LSP — sees live errors and execution
+  - 4-layer trust protocol
+  - Session memory tied to specific code locations
+  - Every design decision made for someone who cannot see
+
+"Asking how BlindCode differs from Claude Voice is like asking how
+a surgeon's scalpel differs from a kitchen knife. Both are sharp.
+Only one was built for the operating table."
+
+EDGE CASE 6: "Isn't this a small market — blind developers are rare"
+---------------------------------------------------------------------
+Response:
+  - 253 million visually impaired globally, 2.2 billion with some impairment
+  - Zero IDEs were built for them — market is not small, tools have been small
+  - Spatial audio navigation benefits sighted devs: commuting, multitasking,
+    eye fatigue, vision disability accommodation at workplace
+  - Historical precedent: voice interfaces designed for disability
+    became Siri, Alexa, Google Assistant — mainstream consumer products
+  - "We built for the extreme user. The mainstream will follow."
+
+EDGE CASE 7: "Can't they just use screen readers + Copilot?"
+-------------------------------------------------------------
+Response: Do not answer. Demonstrate.
+  Live demo: Put on blindfold, open VS Code + NVDA, try to navigate to
+  a function. Tab through raw aria labels for 3 minutes.
+  Switch to BlindCode. Say "take me to the auth function." 2 seconds.
+  "That is the answer."
+
+EDGE CASE 8: "It's just an AI wrapper"
+-----------------------------------------
+Response:
+  5 custom engineering layers beyond the AI model:
+  1. Custom AST-to-audio spatial mapper (Tree-sitter + Howler.js)
+  2. Intent parser converting speech to structured IDE commands
+  3. Confidence calibration post-processing on every AI output
+  4. Session memory tied to specific code locations, not just conversation
+  5. Trust protocol engine — propose/confirm/checkpoint cycle
+  "It's not a wrapper. It's a purpose-built cognitive layer that uses an
+   LLM as its reasoning engine — the way a car uses an engine but is
+   not just an engine."
+
+EDGE CASE 9: Large codebases — AI loses context
+-------------------------------------------------
+Mitigation:
+  - Scope narrowing: "Only watch the auth folder" — limits context window
+  - Landmark system: developer names key locations, returns instantly
+  - Project map maintained as structured JSON, not raw code
+  - AI reads only ±10 lines of cursor context + error list
+  - Chunked context: summarize distant code, detail nearby code
+
+EDGE CASE 10: Latency — AI takes too long to respond
+------------------------------------------------------
+Target: < 3 seconds from voice command to spoken response
+Mitigation:
+  - Whisper "base" model: ~0.5s on CPU for 5s audio clip
+  - Claude API typical latency: ~1-2s for short prompts
+  - Web Speech API: ~0ms (browser native)
+  - Total expected: ~2-3s, acceptable for spoken interaction
+  - For demo: use pre-recorded test file to eliminate network variability
+  - Streaming API responses: speak first sentence while rest generates
+
+EDGE CASE 11: "What about programming education for blind learners?"
+---------------------------------------------------------------------
+Bonus response:
+  "Learner mode is built in — AI explains every action as it happens.
+   'Adding a null check here prevents the crash when user doesn't exist.
+   Here's why null checks are important...' BlindCode isn't just a tool.
+   It's a platform for blind developers to learn, build, and ship."
+
+EDGE CASE 12: "Is this accessible for deaf-blind developers?"
+--------------------------------------------------------------
+Honest response:
+  "Current version is optimized for blind, sighted-hearing developers.
+   Braille display integration is on the roadmap — our trust protocol
+   output is already structured for Braille API compatibility.
+   We've architected for it, not built it yet."
+
+
+================================================================================
+19. API PROMPT TEMPLATES
+================================================================================
+
+19.1 Main System Prompt
+-------------------------
+You are BlindCode — an AI co-pilot for a blind software developer.
+
+CRITICAL RULES:
+- The developer CANNOT see the screen at all
+- Never use visual language: "as you can see", "look at", "you'll notice"
+- Always use spatial language: "inside", "above", "to the left in the file"
+- Keep all responses under 4 sentences — developer hears every word in real time
+- End every suggestion with your confidence as: CONFIDENCE:XX (0-100)
+- Never apply changes — always propose and wait for confirmation
+- When reading code changes aloud, be precise: say variable names, types, syntax
+
+Current State:
+File: {filename} | Total lines: {total_lines}
+Cursor: Line {current_line}, Column {current_column}
+Current scope: {scope_path}
+Active errors: {errors}
+Active warnings: {warnings}
+Recent changes: {last_5_actions}
+Available checkpoints: {checkpoint_list}
+
+Nearby code:
+{code_context_10_lines}
+
+19.2 Bug Finding Prompt
+------------------------
+User said: "Does anything look wrong?"
+Full file errors from LSP: {full_error_list}
+Focus area (current function): {current_function_code}
+
+Find the most critical issue. Explain it in one sentence of plain English.
+State which line it's on and what function it's inside.
+State your confidence. Ask if developer wants to navigate there.
+Do not list all errors — prioritize the most critical one.
+
+19.3 Code Generation Prompt
+-----------------------------
+User requested: "{developer_request}"
+Current position: {scope_path}, line {current_line}
+Language: {language}
+Existing code context: {surrounding_code}
+
+Generate the code. Then read it back as if speaking it aloud — describe
+what each part does in plain language. Keep the explanation under 3 sentences.
+State confidence. Then propose: "Shall I insert this?"
+
+19.4 Navigation Prompt
+------------------------
+User said: "{navigation_request}"
+Available symbols in project: {symbol_list}
+Current file: {filename}
+
+Identify the target symbol. State its exact location: file, line, function.
+If ambiguous (multiple matches), list the top 2 options briefly and ask which.
+Confirm you're navigating: "Taking you to [name] in [file], line [N]."
+
+19.5 Explanation Prompt
+-------------------------
+User said: "What does this do?" / "Explain this"
+Target code: {selected_or_nearby_code}
+
+Explain in 2-3 sentences as if describing to someone who cannot see it.
+Use structure words: "This function takes X and returns Y.
+Inside, it first does A, then B, then C."
+No visual descriptions. Pure logical flow.
+
+
+================================================================================
+20. MVP SCOPE FOR HACKATHON
+================================================================================
+
+Build ONLY these 3 things perfectly. Everything else is polish.
+
+THING 1 — Spatial Audio Navigation (4 hours)
+---------------------------------------------
+What to build:
+  - Single-file audio layer
+  - Cursor move event → compute depth + position → play Howler.js sound
+  - Error state → play error-buzz.mp3 on loop
+  - 5 audio files minimum
+
+What NOT to build yet:
+  - Multi-file spatial audio
+  - Custom audio per syntax type (just depth + position for MVP)
+
+Code entry point:
+  vscode.window.onDidChangeTextEditorSelection(event => {
+    const line = event.selections[0].active.line;
+    const depth = getNestingDepth(line);
+    const position = line / getTotalLines();
+    playAudio(depth, position, getLineType(line));
+  });
+
+THING 2 — Conversational AI Co-Pilot (4 hours)
+------------------------------------------------
+What to build:
+  - Whisper STT for voice input
+  - FastAPI backend with intent classification
+  - Claude/Gemini API call with context injection
+  - Web Speech API for output
+  - 3 commands working perfectly: "Where am I?", "Find bugs", "Fix it"
+
+What NOT to build yet:
+  - Full intent parser (hardcode the 3 demo commands)
+  - Complex session memory (just last 3 actions)
+
+THING 3 — Trust Protocol (2 hours)
+-------------------------------------
+What to build:
+  - Pending change state (never auto-apply)
+  - Read-aloud before confirm
+  - Git commit before apply
+  - "Confirm" and "Reject" voice commands
+
+DEMO REHEARSAL — 4 hours
+  Rehearse the 4-minute demo script 20+ times.
+  The demo IS the product for the hackathon.
+  Practice the blindfold transition.
+  Have fallback if AI is slow: pre-recorded response on backup.
+
+Total build time: ~10 focused hours
+Total demo prep: ~4 hours
+Total: 14 hours to a winning submission
+
+
+================================================================================
+21. DEMO SCRIPT (5-10 MINUTES)
+================================================================================
+
+PRE-DEMO SETUP
+  - BlindCode extension installed and running
+  - Test project: "ShopApp" with a checkout.js file
+  - checkout.js has a null reference bug on line 14 (intentional)
+  - Audio connected to speakers (spatial audio must be heard by room)
+  - Blindfold ready for one team member
+  - Practice this script 20+ times minimum
+
+----------------------------------------------------------------------
+[00:00] THE HOOK — No Introduction, No Slides
+----------------------------------------------------------------------
+Team member A walks to stage. Puts on blindfold immediately. No words yet.
+Team member B (standing aside, not at keyboard) speaks to the room:
+
+  "Every IDE ever built assumed you could see."
+  [pause 2 seconds]
+  "We didn't."
+  [pause 1 second]
+  "This is BlindCode."
+
+Spatial audio hums softly through speakers as extension opens.
+
+----------------------------------------------------------------------
+[00:45] ORIENTATION — Where Am I?
+----------------------------------------------------------------------
+Blindfolded developer (A) speaks:
+
+  "BlindCode, where am I?"
+
+AI responds (heard through speakers):
+  "You're in ShopApp. Three files are open. You're currently in
+   checkout.js — inside the processPayment function, line 8 of 23.
+   Two errors are active in this file."
+
+Spatial audio plays — mid-pitched tone, slightly right of center.
+
+Team member B (to judges):
+  "He just oriented himself in a 200-line codebase in 4 seconds.
+   A screen reader takes 3 minutes."
+
+----------------------------------------------------------------------
+[02:00] BUG DISCOVERY — AI Diagnoses
+----------------------------------------------------------------------
+Developer A:
+
+  "Does anything look wrong here?"
+
+AI responds:
+  "There's a null reference on line 14. The user object is accessed
+   directly without checking if it exists first. If a guest checks out,
+   this will crash the entire payment flow. I'm 91% confident.
+   Want me to take you there?"
+
+Developer A: "Yes."
+
+Audio pans right, error buzz begins. Developer is at line 14.
+
+Developer A: "Read me that line."
+
+AI reads the line aloud clearly.
+
+Team member B (to judges):
+  "Notice he didn't search, he didn't tab, he didn't look.
+   He just asked."
+
+----------------------------------------------------------------------
+[04:00] THE FIX — Trust Protocol Live
+----------------------------------------------------------------------
+Developer A: "Fix it."
+
+AI: "I'll add a null check before accessing user.id. Here's the exact
+     change: if user is null or undefined, return an error response
+     before line 14. Confidence: 94%. Shall I apply this?"
+
+Developer A: "Read it again."
+
+AI re-reads the change.
+
+Developer A: "Confirm."
+
+AI: "Done. Checkpoint saved automatically as 'null-fix-checkout'."
+
+Error buzz stops. Clean tone resumes.
+
+Team member B (to judges):
+  "He heard the change. He verified it. He confirmed it.
+   That's not AI replacing the developer — that's AI working for the developer."
+
+----------------------------------------------------------------------
+[05:30] WRITING CODE — Full Development Cycle
+----------------------------------------------------------------------
+Developer A:
+
+  "Add a function that gives premium users a 25% discount,
+   capped at 50 dollars."
+
+AI writes the function, reads it back completely and clearly.
+
+Developer A: "Run it with input 200."
+
+AI: "The function returned 150.0. The 25% discount was applied and the
+     cap of 50 dollars was enforced correctly. Looks right."
+
+----------------------------------------------------------------------
+[07:00] THE UNDO MOMENT — Room Goes Silent
+----------------------------------------------------------------------
+Developer A:
+
+  "Actually — scrap everything since I started this discount function."
+
+AI: "Rolling back 3 changes from the last 4 minutes. Restored to
+     'null-fix-checkout'. Done."
+
+Developer A: "Perfect."
+
+[pause — let this land]
+
+----------------------------------------------------------------------
+[08:30] REMOVE BLINDFOLD — The Reveal
+----------------------------------------------------------------------
+Developer A removes blindfold. Looks at the code on screen. It's correct.
+
+Pause 3 full seconds. Let judges look at the screen.
+
+Developer A (quietly, not loudly):
+  "I wrote, debugged, and shipped that without seeing a single character."
+
+[pause]
+
+  "That's not a demo."
+
+[pause]
+
+  "That's what every blind developer deserves on day one."
+
+----------------------------------------------------------------------
+[09:15] THE STAT DROP — Final Statement
+----------------------------------------------------------------------
+Team member B:
+
+  "253 million people are visually impaired. Zero IDEs were ever built
+   for them. BlindCode runs entirely on free, open-source tools —
+   so any blind developer, anywhere in the world, can download this
+   and start building today."
+
+  "We're not patching exclusion."
+
+[pause]
+
+  "We're ending it."
+
+----------------------------------------------------------------------
+[09:45] READY FOR QUESTIONS
+----------------------------------------------------------------------
+Both team members stand. Do not rush to answer.
+Let judges absorb what they just saw.
+If a judge asks about Claude Voice: deliver the scalpel vs kitchen knife line.
+If a judge asks about wrong AI code: deliver the 4-layer trust protocol answer.
+
+
+================================================================================
+22. BUILD PLAN & TIMELINE
+================================================================================
+
+If you have 48 hours (typical hackathon):
+
+HOUR 0-2: Setup
+  [ ] Create VS Code extension scaffold (yo code generator)
+  [ ] Set up FastAPI backend (local, port 8000)
+  [ ] Install and test Whisper locally (transcribe a test recording)
+  [ ] Set up Claude API free tier account + test basic call
+  [ ] Install Howler.js in extension
+
+HOUR 2-6: Spatial Audio Engine
+  [ ] Hook VS Code cursor move events
+  [ ] Implement getNestingDepth() using Tree-sitter or simple bracket counting
+  [ ] Map depth to Howler.js pitch rate
+  [ ] Map line number to stereo position
+  [ ] Implement error detection via VS Code diagnostics API
+  [ ] Test: cursor in global scope → low tone. In nested if → high tone.
+
+HOUR 6-10: AI Co-Pilot
+  [ ] Build Whisper recording pipeline (push-to-talk mode first)
+  [ ] Build FastAPI intent parser (hardcode 3 intents for MVP)
+  [ ] Build Claude API call with context injection template
+  [ ] Build Web Speech API output in VS Code webview
+  [ ] Test: "Where am I?" → spoken response
+
+HOUR 10-12: Trust Protocol
+  [ ] Build pending_change state (never auto-apply)
+  [ ] Build confirmation listener ("confirm" / "reject" voice commands)
+  [ ] Build Git checkpoint on confirm (git commit via child_process)
+  [ ] Build "undo to checkpoint" command
+  [ ] Test: full propose → read → confirm → apply → restore cycle
+
+HOUR 12-14: Integration & Bug Fixes
+  [ ] Wire all 3 systems together
+  [ ] Test complete flow: voice in → AI response → audio feedback → confirm → code change
+  [ ] Fix any latency issues
+  [ ] Test with actual blindfold on team member
+
+HOUR 14-24: Demo Rehearsal
+  [ ] Set up test project (ShopApp with intentional null reference bug)
+  [ ] Rehearse demo script 10 times
+  [ ] Record a backup demo video (in case of live technical failure)
+  [ ] Prepare judge Q&A responses
+
+HOUR 24-36: Polish & Backup Plans
+  [ ] Add confidence scoring to AI responses
+  [ ] Add "repeat that" and "slower/faster" voice commands
+  [ ] Add 2-3 more spatial audio textures (function boundary click, comment chime)
+  [ ] Test on different machines / OS
+
+HOUR 36-48: Final Rehearsal
+  [ ] 10 more full demo run-throughs with blindfold
+  [ ] Time each section of demo
+  [ ] Prepare pitch intro (30 seconds, no slides)
+  [ ] Sleep
+
+
+================================================================================
+23. JUDGE Q&A DEFENSE SHEET
+================================================================================
+
+Print this and memorize it.
+
+Q: "How is this different from Claude Voice or ChatGPT voice mode?"
+A: "Claude Voice is a general chatbot with a mic. BlindCode is a
+    surgical IDE instrument. It knows your cursor position, your live
+    errors, your project structure, your session history — and it gives
+    code a spatial shape through audio. Claude Voice does none of that.
+    Asking the difference is like asking how a scalpel differs from a
+    kitchen knife. Both are sharp. Only one was built for the operating table."
+
+Q: "What if the AI gives wrong code?"
+A: "4 layers prevent that. One: AI never applies without spoken 'confirm'.
+    Two: AI reads every change aloud before asking. Three: AI states its
+    confidence — below 80% it flags uncertainty. Four: auto checkpoint
+    before every change — one sentence to restore everything.
+    Sighted developers also commit wrong code. We have more safety nets
+    than any standard IDE."
+
+Q: "The market is too small"
+A: "253 million visually impaired globally. Zero IDEs for them.
+    The market isn't small — the tools have been small.
+    And spatial audio benefits all developers: commuting, multitasking,
+    vision fatigue. We built for the extreme user. The mainstream follows.
+    Voice interfaces were built for disability. They became Siri and Alexa."
+
+Q: "Can't they use screen readers + Copilot?"
+A: "Want to see?" [Put on blindfold. Open VS Code + NVDA. Tab for 2 minutes.]
+    "That's the current state. Now watch." [Switch to BlindCode. 2 seconds to function.]
+    "That is the answer."
+
+Q: "It's just an AI wrapper"
+A: "Five custom engineering layers: AST-to-audio spatial mapper,
+    intent parser for IDE commands, confidence calibration, session memory
+    tied to code locations, and the trust protocol engine.
+    A car isn't just an engine. BlindCode isn't just an API call."
+
+Q: "What about latency?"
+A: "Whisper base model: 0.5 seconds. Claude API: 1-2 seconds.
+    Web Speech: zero. Under 3 seconds total — acceptable for spoken interaction.
+    We stream responses and speak the first sentence while the rest generates."
+
+Q: "Does it work offline?"
+A: "Core features yes. Whisper runs locally. Web Speech API is browser-native.
+    No internet needed for navigation and audio. AI features need connectivity
+    — same as any developer tool with AI assistance."
+
+Q: "What languages does it support?"
+A: "Tree-sitter supports 40+ programming languages — JavaScript, Python,
+    TypeScript, Rust, Go, Java, C++, Ruby, and more. Whisper supports
+    99 spoken languages. More than any other IDE ships on day one."
+
+Q: "How do you handle large codebases?"
+A: "Scope narrowing — developer says 'only watch auth folder' and AI limits
+    context. Landmark system for instant jump to named locations.
+    Project map in structured JSON, not raw code. Chunked context —
+    AI gets detail near cursor, summaries for distant code."
+
+Q: "What's the business model?"
+A: "Free and open-source forever for individual blind developers.
+    Enterprise: integration support, team licenses, Braille display APIs.
+    But for this room: this is a tool the world needs. We built it in
+    48 hours with $0. Imagine a team of 10 with a year."
+
+Q: "Why VS Code and not a standalone IDE?"
+A: "Developers already live in VS Code. Adoption is instant.
+    Extension API gives us full runtime access — errors, diagnostics, LSP.
+    We don't fight the ecosystem. We make it accessible."
+
+
+================================================================================
+24. FILE & FOLDER STRUCTURE
+================================================================================
+
+blindcode/
+├── extension/                        # VS Code Extension (TypeScript)
+│   ├── src/
+│   │   ├── extension.ts              # Entry point, registers all commands
+│   │   ├── audio/
+│   │   │   ├── spatialAudioEngine.ts # Howler.js spatial audio controller
+│   │   │   ├── audioMapper.ts        # AST node → audio params mapping
+│   │   │   └── sounds/               # Audio files (.mp3)
+│   │   │       ├── base-tone.mp3
+│   │   │       ├── error-buzz.mp3
+│   │   │       ├── chime.mp3
+│   │   │       ├── click.mp3
+│   │   │       ├── whoosh.mp3
+│   │   │       └── arrival.mp3
+│   │   ├── voice/
+│   │   │   ├── voiceInput.ts         # Push-to-talk + wake word listener
+│   │   │   ├── voiceOutput.ts        # Web Speech API TTS wrapper
+│   │   │   └── speechCommands.ts     # Always-on command registry
+│   │   ├── ai/
+│   │   │   ├── intentParser.ts       # Speech → structured intent
+│   │   │   ├── contextBuilder.ts     # Assembles project context for API
+│   │   │   └── trustProtocol.ts      # Propose/confirm/checkpoint cycle
+│   │   ├── navigation/
+│   │   │   ├── codeGPS.ts            # "Where am I?" and breadcrumbs
+│   │   │   ├── landmarkManager.ts    # Named location bookmarks
+│   │   │   └── symbolNavigator.ts    # Jump to function/class/variable
+│   │   └── debug/
+│   │       ├── errorNarrator.ts      # LSP diagnostics → plain English
+│   │       └── executionReplayer.ts  # Stack trace → spoken narrative
+│   ├── package.json                  # Extension manifest + activation events
+│   └── tsconfig.json
+│
+├── backend/                          # Python FastAPI (local server)
+│   ├── main.py                       # FastAPI app, all endpoints
+│   ├── whisper_stt.py                # Whisper transcription module
+│   ├── intent_classifier.py          # Intent parsing logic
+│   ├── claude_client.py              # Claude API wrapper
+│   ├── context_manager.py            # Session memory management
+│   ├── checkpoint_manager.py         # Git checkpoint operations
+│   ├── ast_parser.py                 # Tree-sitter integration
+│   └── requirements.txt              # pip dependencies
+│
+├── demo/                             # Demo project (ShopApp)
+│   ├── checkout.js                   # Has intentional null reference bug
+│   ├── auth.js                       # Secondary file for navigation demo
+│   └── README.md
+│
+├── audio-assets/                     # Source audio files
+│   └── generate_sounds.py            # Script to generate MP3s via Audacity
+│
+└── README.md                         # Setup instructions
+
+
+API Endpoints (FastAPI):
+  POST /transcribe          { audio_base64 } → { transcript }
+  POST /intent              { transcript, context } → { intent_json }
+  POST /ai-query            { intent, context, history } → { response, confidence }
+  POST /checkpoint/create   { name, description } → { git_hash }
+  POST /checkpoint/restore  { name } → { success }
+  GET  /ast/context         { file, line } → { depth, scope, node_type }
+
+
+================================================================================
+                              END OF DOCUMENT
+================================================================================
+
+BlindCode PRD v1.0
+Prepared for Hackathon Submission
+Total Systems: 5
+Total Cost: $0
+Total Demo Duration: 5-10 minutes
+Objective: First Prize among 3000+ teams
+
+"We're not patching exclusion. We're ending it."
+================================================================================

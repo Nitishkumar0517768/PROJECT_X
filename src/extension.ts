@@ -115,14 +115,29 @@ class BlindCodeViewProvider implements vscode.WebviewViewProvider {
     });
 
     this.speechService.on('transcript', (msg: { text: string, isFinal: boolean }) => {
-      if (this.isAsleep) return;
+      const command = this.commandRegistry.match(msg.text);
+
+      // 1. Instant Interrupts (even on interim results)
+      if (command === 'startListening') {
+        if (this.isAsleep) {
+          this.isAsleep = false;
+          this.voiceOutput.speak('I am listening.', 'high');
+        }
+        return;
+      }
+      
+      if (command === 'stopSpeaking') {
+        this.handleStopSpeaking();
+      }
+
+      if (this.isAsleep) return; // Ignore everything else while asleep
 
       // Show live transcript in sidebar
       this.postMessage({ type: 'showTranscript', text: `🗣️ ${msg.text}` });
 
+      // 2. Full commands ONLY on final phrase
       if (msg.isFinal && msg.text.trim()) {
-        const command = this.commandRegistry.match(msg.text);
-        if (command) {
+        if (command && command !== 'startListening' && command !== 'stopSpeaking') {
           console.log('[BlindCode] Voice command:', command);
           this.dispatchCommand(command, msg.text);
         }
@@ -147,31 +162,45 @@ class BlindCodeViewProvider implements vscode.WebviewViewProvider {
   }
 
   /** Route a matched command name to its handler */
-  private dispatchCommand(command: string, rawText: string): void {
-    const dispatch: Record<string, () => void> = {
-      'whereAmI':          () => this.handleWhereAmI(),
-      'findBugs':          () => this.handleFindBugs(),
-      'fixIt':             () => this.handleFixIt(rawText),
-      'confirm':           () => this.handleConfirm(),
-      'reject':            () => this.handleReject(),
-      'startListening':    () => { this.isAsleep = false; this.voiceOutput.speak('Listening.', 'high'); },
-      'stopListening':     () => { this.isAsleep = true; this.voiceOutput.speak('Going to sleep.', 'high'); },
-      'repeatLast':        () => this.handleRepeatLast(),
-      'stopSpeaking':      () => this.handleStopSpeaking(),
-      'slower':            () => this.handleSlower(),
-      'faster':            () => this.handleFaster(),
-      'spellItOut':        () => this.handleSpellItOut(),
-      'dropLandmark':      () => this.handleDropLandmark(),
-      'goToLandmark':      () => this.handleGoToLandmark(),
-      'toggleAudio':       () => this.handleToggleAudio(),
-      'createCheckpoint':  () => this.handleCreateCheckpoint(),
-      'restoreCheckpoint': () => this.handleRestoreCheckpoint(),
-    };
-    const handler = dispatch[command];
-    if (handler) {
-      handler();
-    } else {
-      console.warn('[BlindCode] No handler for command:', command);
+  private async dispatchCommand(command: string, rawText: string): Promise<void> {
+    if (this.isProcessingVoice && command !== 'stopSpeaking' && command !== 'startListening') {
+      console.log('[BlindCode] Ignoring command, already processing:', command);
+      return;
+    }
+
+    if (command !== 'stopSpeaking' && command !== 'startListening') {
+      this.isProcessingVoice = true;
+    }
+
+    try {
+      const dispatch: Record<string, () => Promise<void> | void> = {
+        'whereAmI':          () => this.handleWhereAmI(),
+        'findBugs':          () => this.handleFindBugs(),
+        'fixIt':             () => this.handleFixIt(rawText),
+        'confirm':           () => this.handleConfirm(),
+        'reject':            () => this.handleReject(),
+        'startListening':    () => { this.isAsleep = false; this.voiceOutput.speak('Listening.', 'high'); },
+        'stopListening':     () => { this.isAsleep = true; this.voiceOutput.speak('Going to sleep.', 'high'); },
+        'repeatLast':        () => this.handleRepeatLast(),
+        'stopSpeaking':      () => this.handleStopSpeaking(),
+        'slower':            () => this.handleSlower(),
+        'faster':            () => this.handleFaster(),
+        'spellItOut':        () => this.handleSpellItOut(),
+        'dropLandmark':      () => this.handleDropLandmark(),
+        'goToLandmark':      () => this.handleGoToLandmark(),
+        'toggleAudio':       () => this.handleToggleAudio(),
+        'createCheckpoint':  () => this.handleCreateCheckpoint(),
+        'restoreCheckpoint': () => this.handleRestoreCheckpoint(),
+      };
+      
+      const handler = dispatch[command];
+      if (handler) {
+        await handler();
+      } else {
+        console.warn('[BlindCode] No handler for command:', command);
+      }
+    } finally {
+      this.isProcessingVoice = false;
     }
   }
 

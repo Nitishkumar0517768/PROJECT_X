@@ -6,15 +6,16 @@ import * as os from 'os';
 import * as path from 'path';
 import * as fs from 'fs';
 
-const API_KEY = '4124a27e33604e77aa7a9c93a5025bfb';
+const API_KEY = 'c2e652aeb4b81b8519a37451557051b8e63c7a96';
 
-const ASSEMBLYAI_URL =
-  `wss://streaming.assemblyai.com/v3/ws` +
-  `?sample_rate=16000` +
-  `&speech_model=universal-streaming-english` +
-  `&format_text=false` +
-  `&punctuate=false` +
-  `&disfluencies=true`;
+const DEEPGRAM_URL =
+  `wss://api.deepgram.com/v1/listen` +
+  `?model=nova-2` +
+  `&smart_format=true` +
+  `&encoding=linear16` +
+  `&sample_rate=16000` +
+  `&channels=1` +
+  `&interim_results=true`;
 
 // Python script: writes raw PCM16 binary to stdout, metadata to stderr
 const MIC_PYTHON = `
@@ -73,10 +74,10 @@ export class SpeechService extends EventEmitter {
   start() {
     if (this.ws) this.stop();
 
-    console.log('[BlindCode] Connecting to AssemblyAI...');
+    console.log('[BlindCode] Connecting to Deepgram...');
 
-    this.ws = new WebSocket(ASSEMBLYAI_URL, {
-      headers: { 'Authorization': API_KEY }
+    this.ws = new WebSocket(DEEPGRAM_URL, {
+      headers: { 'Authorization': `Token ${API_KEY}` }
     });
 
     this.ws.on('open', () => {
@@ -89,17 +90,17 @@ export class SpeechService extends EventEmitter {
     this.ws.on('message', (data: WebSocket.Data) => {
       try {
         const msg = JSON.parse(data.toString());
-        const t = msg.type || '';
-        console.log('[BlindCode]', t, msg.text || '');
+        
+        if (msg.type === 'Results' && msg.channel && msg.channel.alternatives) {
+          const transcript = msg.channel.alternatives[0].transcript;
+          if (!transcript && !msg.is_final) return;
 
-        if (t === 'PartialTranscript' && msg.text) {
-          this.emit('transcript', { text: msg.text, isFinal: false });
-        } else if (t === 'FinalTranscript' && msg.text) {
-          this.emit('transcript', { text: msg.text, isFinal: true });
-          this._updateEditor(msg.text);
-        } else if (t === 'Error') {
-          fs.appendFileSync(path.join(os.tmpdir(), 'blindcode_debug.log'), `\n[ASSEMBLY ERROR] ${msg.error}`);
-          this.emit('error', new Error(msg.error || 'AssemblyAI error'));
+          const isFinal = msg.is_final;
+          
+          this.emit('transcript', { text: transcript, isFinal });
+        } else if (msg.type === 'Error') {
+          fs.appendFileSync(path.join(os.tmpdir(), 'blindcode_debug.log'), `\n[DEEPGRAM ERROR] ${msg.message}`);
+          this.emit('error', new Error(msg.message || 'Deepgram error'));
         }
       } catch (_) {}
     });
@@ -193,28 +194,5 @@ export class SpeechService extends EventEmitter {
     if (this.micProcess) { this.micProcess.kill(); this.micProcess = null; }
   }
 
-  private async _updateEditor(text: string) {
-    const editor = vscode.window.activeTextEditor;
-    if (!editor) return;
-
-    const edit = new vscode.WorkspaceEdit();
-    if (this.currentDecoration && this.currentPartialText.length > 0) {
-      edit.replace(editor.document.uri, this.currentDecoration, text + ' ');
-    } else {
-      const pos = editor.selection.active;
-      edit.insert(editor.document.uri, pos, text + ' ');
-      this.currentDecoration = new vscode.Range(pos, pos);
-    }
-    await vscode.workspace.applyEdit(edit);
-
-    if (this.currentDecoration) {
-      const newEnd = editor.document.positionAt(
-        editor.document.offsetAt(this.currentDecoration.start) + text.length + 1
-      );
-      this.currentDecoration = new vscode.Range(this.currentDecoration.start, newEnd);
-    }
-    this.currentPartialText = text;
-    this.currentDecoration = null;
-    this.currentPartialText = '';
-  }
+  // Removed _updateEditor to prevent voice commands from corrupting active code
 }
